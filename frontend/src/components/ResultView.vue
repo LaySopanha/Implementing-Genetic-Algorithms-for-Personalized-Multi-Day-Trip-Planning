@@ -299,11 +299,13 @@ onMounted(() => { if (props.result) { initMap(); plotDay(activeDay.value) } })
       <!-- Top bar: title + start over -->
       <header class="trip-bar">
         <div class="trip-bar-left">
-          <span class="chip">
-            <Icon icon="mdi:check-circle-outline" width="12" height="12" />
-            Trip Ready
-          </span>
-          <h1 class="trip-title">{{ result.total_days }} Days in <em>{{ result.province }}</em></h1>
+          <div class="title-row">
+            <h1 class="trip-title">{{ result.total_days }} Days in <em>{{ result.province }}</em></h1>
+            <span class="chip">
+              <Icon icon="mdi:check-circle-outline" width="12" height="12" />
+              Trip Ready
+            </span>
+          </div>
         </div>
         <button class="btn-outline" @click="$emit('restart')">
           <Icon icon="mdi:refresh" width="15" height="15" />
@@ -498,12 +500,13 @@ onMounted(() => { if (props.result) { initMap(); plotDay(activeDay.value) } })
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.1rem 1.75rem 0.9rem;
+  padding: 0.7rem 1.75rem 0.55rem;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
-.trip-bar-left { display: flex; flex-direction: column; gap: 0.2rem; }
+.trip-bar-left { display: flex; align-items: center; }
+.title-row { display: flex; align-items: center; gap: 0.8rem; }
 
 .chip {
   display: inline-flex;
@@ -513,23 +516,23 @@ onMounted(() => { if (props.result) { initMap(); plotDay(activeDay.value) } })
   color: var(--accent-color);
   font-size: 0.7rem;
   font-weight: 700;
-  padding: 0.18rem 0.55rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 9999px;
   width: fit-content;
 }
 
 .trip-title {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--primary-color);
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .trip-title em { font-style: normal; color: var(--accent-color); }
 
 /* ── Day tab bar ─────────────────────────────────────────────────────────── */
 .day-tabs-container {
-  padding: 0.75rem 1.75rem;
+  padding: 0.5rem 1.75rem;
   border-bottom: 1px solid var(--border-color);
   background: var(--surface-color);
   display: flex;
@@ -564,8 +567,8 @@ onMounted(() => { if (props.result) { initMap(); plotDay(activeDay.value) } })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1.5rem;
-  min-width: 100px;
+  padding: 0.45rem 1.2rem;
+  min-width: 90px;
   border: none;
   background: transparent;
   cursor: pointer;

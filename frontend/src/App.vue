@@ -261,7 +261,8 @@ const handleRestart = () => {
   transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.top-header.header-scrolled .header-inner {
+.top-header.header-scrolled .header-inner,
+.app-container.result-layout .header-inner {
   height: 60px;
 }
 
