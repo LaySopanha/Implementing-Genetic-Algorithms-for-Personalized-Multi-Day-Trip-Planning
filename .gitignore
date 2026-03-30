@@ -11,7 +11,14 @@ build/
 .eggs/
 *.egg
 .env
-.env.*
+.env.local
+.env.*.local
+
+# Pipeline data files (large CSVs — not committed)
+pipeline/data/raw/*.csv
+pipeline/data/interim/*.csv
+pipeline/data/processed/*.csv
+pipeline/collection/here_cache.json
 
 # Node
 node_modules/
