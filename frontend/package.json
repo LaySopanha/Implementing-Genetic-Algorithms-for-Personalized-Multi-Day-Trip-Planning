@@ -1,0 +1,20 @@
+{
+  "name": "frontend",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@iconify/vue": "^5.0.0",
+    "axios": "^1.13.5",
+    "leaflet": "^1.9.4",
+    "lucide-vue-next": "^0.575.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.4",
+    "@vue/compiler-sfc": "^3.0.4",
+    "vite": "^7.3.1",
+    "vue": "^3.5.28"
+  }
+}
