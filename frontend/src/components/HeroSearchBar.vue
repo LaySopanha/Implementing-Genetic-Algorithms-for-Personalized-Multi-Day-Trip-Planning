@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { MapPin, Calendar, Navigation, Search, Map, ChevronDown } from 'lucide-vue-next'
+import { MapPin, Calendar, Compass, Search, Map, ChevronDown } from 'lucide-vue-next'
 import axios from 'axios'
 
 const props = defineProps({
@@ -144,13 +144,14 @@ const handleSearch = () => {
 }
 
 const durationOptions = Array.from({ length: 14 }, (_, i) => i + 1)
-const pacingOptions = [
-  { value: 1, label: '1 Place/Day (Relaxed)' },
-  { value: 2, label: '2 Places/Day (Easy)' },
-  { value: 3, label: '3 Places/Day (Normal)' },
-  { value: 4, label: '4 Places/Day (Busy)' },
-  { value: 5, label: '5 Places/Day (Packed)' },
+const tripStyleOptions = [
+  { value: 'adventure', label: 'Adventure', desc: 'New area & hotel daily, more stops' },
+  { value: 'balanced',  label: 'Balanced',  desc: 'Comfortable mix of sights and rest' },
+  { value: 'chill',     label: 'Chill',     desc: 'One base, slow pace, fewer stops' },
 ]
+const currentStyleLabel = computed(() =>
+  tripStyleOptions.find(o => o.value === localForm.value.mode)?.label || 'Balanced'
+)
 </script>
 <template>
   <div class="hero-search-root">
@@ -240,28 +241,31 @@ const pacingOptions = [
 
       <div class="divider"></div>
 
-      <!-- Field 3: Pacing -->
+      <!-- Field 3: Trip Style -->
       <div
         class="search-field"
-        :class="{ 'field-open': openField === 'perDay' }"
-        @click.stop="toggleField('perDay', $event)"
+        :class="{ 'field-open': openField === 'mode' }"
+        @click.stop="toggleField('mode', $event)"
       >
         <div class="field-content">
-          <label>PACING</label>
+          <label>TRIP STYLE</label>
           <div class="input-display">
-            <Navigation :size="18" class="field-icon" />
-            <span class="value-text">{{ localForm.perDay }} Places/Day</span>
-            <ChevronDown :size="14" class="dropdown-icon" :class="{ rotated: openField === 'perDay' }" />
+            <Compass :size="18" class="field-icon" />
+            <span class="value-text">{{ currentStyleLabel }}</span>
+            <ChevronDown :size="14" class="dropdown-icon" :class="{ rotated: openField === 'mode' }" />
           </div>
         </div>
-        <div v-if="openField === 'perDay'" class="dropdown-list" :class="{ 'is-drop-up': dropUp }" @click.stop>
+        <div v-if="openField === 'mode'" class="dropdown-list" :class="{ 'is-drop-up': dropUp }" @click.stop>
           <div
-            v-for="opt in pacingOptions"
+            v-for="opt in tripStyleOptions"
             :key="opt.value"
-            class="dropdown-item"
-            :class="{ selected: localForm.perDay === opt.value }"
-            @click="selectOption('perDay', opt.value)"
-          >{{ opt.label }}</div>
+            class="dropdown-item style-item"
+            :class="{ selected: localForm.mode === opt.value }"
+            @click="selectOption('mode', opt.value)"
+          >
+            <span class="style-item-label">{{ opt.label }}</span>
+            <span class="style-item-desc">{{ opt.desc }}</span>
+          </div>
         </div>
       </div>
 
@@ -287,10 +291,10 @@ const pacingOptions = [
 .search-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 990; /* High enough but below dropdown z-index 1001 if needed */
+  background: rgba(0, 0, 0, 0.25); /* Lighter backdrop */
+  backdrop-filter: blur(4px); /* Toned down from 8px */
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 990;
   cursor: pointer;
 }
 
@@ -299,14 +303,14 @@ const pacingOptions = [
   max-width: 1100px;
   margin: 0 auto;
   position: relative;
-  z-index: 1001; /* Stay above backdrop and fixed header if any */
+  z-index: 1001;
   margin-top: -2.5rem;
 }
 
 /* Transitions */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,
@@ -323,8 +327,7 @@ const pacingOptions = [
 .tab-btn {
   display: flex;
   align-items: center;
-  background: rgba(16, 32, 80, 0.4);
-  backdrop-filter: blur(8px);
+  background: rgba(16, 32, 80, 0.6); /* Slightly more solid, less translucent */
   border: none;
   color: white;
   padding: 0.875rem 2rem;
@@ -338,7 +341,7 @@ const pacingOptions = [
 }
 
 .tab-btn:hover {
-  background: rgba(16, 32, 80, 0.6);
+  background: rgba(16, 32, 80, 0.8);
 }
 
 .tab-btn.active {
@@ -515,6 +518,27 @@ const pacingOptions = [
   color: white;
 }
 
+/* Trip-style two-line items */
+.style-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.style-item-label {
+  font-weight: 700;
+}
+
+.style-item-desc {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.dropdown-item.selected .style-item-desc {
+  color: hsla(0, 0%, 100%, 0.75);
+}
+
 .no-results {
   padding: 1rem;
   font-size: 0.9rem;
@@ -554,7 +578,7 @@ const pacingOptions = [
 }
 
 .btn-search {
-  background: linear-gradient(135deg, hsl(43 82% 49%), hsl(43 82% 60%));
+  background: hsl(43 82% 49%); /* Solid color, no gradient */
   color: hsl(var(--primary));
   border: none;
   border-radius: var(--radius);
@@ -571,8 +595,8 @@ const pacingOptions = [
 }
 
 .btn-search:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px hsla(43, 82%, 49%, 0.3);
+  background: hsl(43 82% 55%); /* Subtle solid color change */
+  transform: translateY(-1px);
 }
 
 .mr-2 { margin-right: 0.5rem; }

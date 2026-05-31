@@ -483,7 +483,12 @@ onBeforeUnmount(() => {
                       </div>
                     </div>
                     <div class="preview-info">
-                      <span class="item-category">{{ item.place.category }}</span>
+                      <div class="info-tags">
+                        <span class="item-category">{{ item.place.category }}</span>
+                        <span v-if="item.place.is_hidden_gem" class="gem-badge" title="Local favorite — high quality, low crowds">
+                          <Icon icon="lucide:gem" width="9" height="9" /> Local Gem
+                        </span>
+                      </div>
                       <h3 class="item-name">{{ item.place.title }}</h3>
                       <p class="item-address" v-if="isReadableAddress(item.place.address)">
                         {{ item.place.address }}
@@ -958,12 +963,33 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+.info-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .item-category {
   font-size: 0.65rem;
   text-transform: uppercase;
   font-weight: 700;
   color: hsl(var(--gold));
   letter-spacing: 0.05em;
+}
+
+.gem-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1ABC9C;
+  background: hsla(168, 76%, 42%, 0.1);
+  padding: 1px 5px;
+  border-radius: 2px;
 }
 
 .item-name {

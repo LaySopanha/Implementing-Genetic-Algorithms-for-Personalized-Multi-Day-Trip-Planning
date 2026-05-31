@@ -13,6 +13,7 @@ const formData = ref({
   province: '',
   days: 3,
   perDay: 3,
+  mode: 'balanced',
   activities: ['Temple', 'Museum', 'Landmark'],
   accommodation: ['Hotel'],
   dining: ['Restaurant']
@@ -81,6 +82,7 @@ const goToItinerary = () => {
       province: formData.value.province,
       days: formData.value.days,
       perDay: formData.value.perDay,
+      mode: formData.value.mode,
       activities: formData.value.activities,
       accommodation: formData.value.accommodation,
       dining: formData.value.dining

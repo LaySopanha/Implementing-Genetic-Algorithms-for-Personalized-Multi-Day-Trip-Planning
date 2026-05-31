@@ -47,6 +47,7 @@ const buildParams = () => {
     province: query.province,
     days: parseInt(query.days) || 3,
     perDay: parseInt(query.perDay) || 3,
+    mode: query.mode || 'balanced',
     activities: query.activities ? (Array.isArray(query.activities) ? query.activities : [query.activities]) : [],
     accommodation: query.accommodation ? (Array.isArray(query.accommodation) ? query.accommodation : [query.accommodation]) : [],
     dining: query.dining ? (Array.isArray(query.dining) ? query.dining : [query.dining]) : []

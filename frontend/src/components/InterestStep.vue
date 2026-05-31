@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-vue-next'
+import { ArrowRight, ArrowLeft, CheckCircle2, SearchX } from 'lucide-vue-next'
 
 const props = defineProps({
   modelValue: Array,
@@ -90,7 +90,7 @@ const handleNext = () => {
       </div>
 
       <div v-else class="no-activities-hint">
-        <div class="hint-icon">🔍</div>
+        <div class="hint-icon"><SearchX :size="32" /></div>
         <p v-if="!availableActivities || availableActivities.length === 0">
           Select a destination to see local activities.
         </p>
@@ -260,9 +260,11 @@ const handleNext = () => {
 }
 
 .hint-icon {
-  font-size: 2.5rem;
   margin-bottom: 1rem;
   opacity: 0.5;
+  color: hsl(var(--primary));
+  display: flex;
+  justify-content: center;
 }
 
 .no-activities-hint p {
