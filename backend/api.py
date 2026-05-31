@@ -11,7 +11,6 @@ import pickle
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 
 # ── Setup FastAPI App ──────────────────────────────────────────────────────────
@@ -511,6 +510,122 @@ def _optimize_route(places: list) -> list:
 
     return best_ever + unroutable
 
+def _optimize_trip_global(candidates: pd.DataFrame, n_days: int, per_day: int,
+                          lambda_score: float = 4.0, lambda_cont: float = 0.0) -> list:
+    """
+    Global trip GA — the SELECTION + DAY-ASSIGNMENT stage (runs before per-day routing).
+
+    Jointly decides *which* activities to use, *which day* each lands on, and a rough
+    visit order — optimizing TOTAL trip distance across all days at once, instead of
+    clustering + sampling each day independently. This is what stops one day from
+    spanning the whole province (the 127 km problem): a place only helps fitness if it
+    sits near its day-mates.
+
+    Chromosome = permutation of candidate row indices.
+    Decode: first n_days*per_day genes are the selected places, split into n_days
+    contiguous chunks (one chunk = one day). Per-day cost = closed-tour distance over
+    that day's places (proxy for hotel → ... → hotel round trip).
+
+    Minimizes:  total_distance
+              + lambda_score * (best_possible_score - selected_score)   # keep quality
+              + lambda_cont  * sum(inter-day centroid distance)         # trip compactness
+
+    Returns list[pd.DataFrame] — one DataFrame per day, rows in visit order.
+    Falls back to a score-ordered contiguous split when too sparse for a real search.
+
+    Defaults tuned by sweep on Siem Reap (6 days × 4/day, 8 seeds):
+      lambda_score=4.0 → knee of distance/score curve (near-max score, ~38 km vs ~46 km at 8.0)
+      lambda_cont=1.0  → minimum total distance for chill mode (compactness sweet spot)
+    """
+    routable = candidates.dropna(subset=['_lat', '_lng']).reset_index(drop=True)
+    N = n_days * per_day
+
+    # Too sparse / trivial → score-ordered contiguous split (no search to do)
+    if len(routable) < N or n_days <= 1 or N <= 2:
+        chosen = candidates.head(max(N, 1)).reset_index(drop=True)
+        return [chosen.iloc[d * per_day:(d + 1) * per_day] for d in range(n_days)]
+
+    lats = routable['_lat'].to_numpy()
+    lngs = routable['_lng'].to_numpy()
+    scores = routable['final_score'].clip(lower=0).to_numpy()
+    M = len(routable)
+
+    # Planar km coords (province scale → flat-earth is fine) + pairwise distance matrix
+    mean_lat_rad = radians(float(np.mean(lats)))
+    x = lngs * 111.0 * cos(mean_lat_rad)
+    y = lats * 111.0
+    dx = x[:, None] - x[None, :]
+    dy = y[:, None] - y[None, :]
+    dist_mat = np.sqrt(dx ** 2 + dy ** 2)
+
+    max_score = float(np.sort(scores)[::-1][:N].sum())  # best achievable score sum
+
+    def trip_cost(chrom):
+        sel = chrom[:N]
+        total = 0.0
+        score_sum = 0.0
+        centroids = []
+        for d in range(n_days):
+            day = sel[d * per_day:(d + 1) * per_day]
+            score_sum += scores[day].sum()
+            if len(day) >= 2:
+                for k in range(len(day)):  # closed tour = round-trip proxy
+                    total += dist_mat[day[k], day[(k + 1) % len(day)]]
+            if lambda_cont > 0 and len(day) > 0:
+                centroids.append((x[day].mean(), y[day].mean()))
+        cont = 0.0
+        for d in range(len(centroids) - 1):
+            cx0, cy0 = centroids[d]
+            cx1, cy1 = centroids[d + 1]
+            cont += sqrt((cx1 - cx0) ** 2 + (cy1 - cy0) ** 2)
+        return total + lambda_score * (max_score - score_sum) + lambda_cont * cont
+
+    # ── compact permutation GA ──────────────────────────────────────────────────
+    POP, GENS, STAG = 40, 60, 18
+    base = list(range(M))
+    population = [random.sample(base, M) for _ in range(POP)]
+    best = min(population, key=trip_cost)
+    best_cost = trip_cost(best)
+    stag = 0
+
+    def ox1(p1, p2):
+        a, b = sorted(random.sample(range(M), 2))
+        seg = p1[a:b]
+        seg_set = set(seg)
+        child = [None] * M
+        child[a:b] = seg
+        fill = [g for g in p2 if g not in seg_set]
+        idx = 0
+        for j in range(M):
+            if child[j] is None:
+                child[j] = fill[idx]
+                idx += 1
+        return child
+
+    def tournament():
+        return min(random.sample(population, 3), key=trip_cost)
+
+    for _ in range(GENS):
+        gen_best = min(population, key=trip_cost)
+        gen_cost = trip_cost(gen_best)
+        if gen_cost < best_cost - 1e-9:
+            best, best_cost, stag = gen_best[:], gen_cost, 0
+        else:
+            stag += 1
+            if stag >= STAG:
+                break
+        new_pop = [best[:]]  # elitism
+        while len(new_pop) < POP:
+            child = ox1(tournament(), tournament())
+            if random.random() < 0.3:  # inversion mutation
+                i, j = sorted(random.sample(range(M), 2))
+                child = child[:i] + child[i:j + 1][::-1] + child[j + 1:]
+            new_pop.append(child)
+        population = new_pop
+
+    sel = best[:N]
+    return [routable.iloc[sel[d * per_day:(d + 1) * per_day]] for d in range(n_days)]
+
 # ── Core Recommendation Logic ──────────────────────────────────────────────────
 def calculate_weighted_score(row):
     R = pd.to_numeric(row['rating'], errors='coerce')
@@ -556,10 +671,19 @@ def get_recommendations(province_encoded, category_encoded):
 
 def build_pool(province_encoded, category_keys):
     pool = pd.DataFrame()
+    # Keep only labels the encoder has seen — one unknown key (e.g. 'resort')
+    # must not drop the whole request's valid categories.
+    known = set(label_encoder_ontology.classes_)
+    valid_keys = [k for k in category_keys if k in known]
+    unknown = [k for k in category_keys if k not in known]
+    if unknown:
+        print(f"Skipping unknown categories {unknown} (not in encoder)")
+    if not valid_keys:
+        return pool
     try:
-        encoded = label_encoder_ontology.transform(category_keys)
+        encoded = label_encoder_ontology.transform(valid_keys)
     except Exception as e:
-        print(f"Failed to encode categories {category_keys}: {e}")
+        print(f"Failed to encode categories {valid_keys}: {e}")
         return pool
     for enc in encoded:
         pool = pd.concat([pool, get_recommendations(province_encoded, enc)])
@@ -795,13 +919,31 @@ def generate_trip_endpoint(req: TripRequest):
     # jumping across the province at random. Hotel and dining are then matched
     # to the centroid of that day's zone.
 
-    def _weighted_sample(pool: pd.DataFrame, n: int, used_ids: set) -> pd.DataFrame:
-        """Sample n rows from pool, weighted by final_score, excluding used_ids."""
+    def _weighted_sample(pool: pd.DataFrame, n: int, used_ids: set,
+                         centroid: tuple = None, geo_scale: float = 15.0) -> pd.DataFrame:
+        """
+        Sample n rows from pool, weighted by final_score, excluding used_ids.
+        When `centroid` (lat, lng) is given, weights are additionally scaled by
+        proximity to that point so far-flung places are rarely picked.
+        `geo_scale` (km) sets how fast the proximity weight decays with distance.
+        """
         available = pool[~pool['id'].isin(used_ids)]
         if available.empty or n <= 0:
             return pd.DataFrame()
         n = min(n, len(available))
         weights = available['final_score'].clip(lower=0) + 1e-6
+
+        if centroid is not None and {'_lat', '_lng'}.issubset(available.columns):
+            clat, clng = centroid
+            # Approx planar km: deg→km (~111) is fine for within-province scale
+            dlat = (available['_lat'] - clat) * 111.0
+            dlng = (available['_lng'] - clng) * 111.0 * cos(radians(clat))
+            dist_km = np.sqrt(dlat ** 2 + dlng ** 2)
+            # Gaussian-ish proximity factor: 1.0 at centroid, decays with distance.
+            # Rows with no coords keep proximity 1.0 (not penalized).
+            proximity = np.exp(-(dist_km / geo_scale) ** 2).fillna(1.0)
+            weights = weights * proximity
+
         weights = weights / weights.sum()
         chosen = np.random.choice(len(available), size=n, replace=False, p=weights.values)
         return available.iloc[sorted(chosen)]
@@ -819,52 +961,22 @@ def generate_trip_endpoint(req: TripRequest):
         with_coords['_dist'] = (with_coords['_lat'] - lat) ** 2 + (with_coords['_lng'] - lng) ** 2
         return with_coords.nsmallest(1, '_dist')
 
-    def _cluster_activities(pool: pd.DataFrame, n_days: int) -> list:
-        """
-        Cluster activity pool into n_days geographic groups ordered by proximity.
-        Returns a list of DataFrames (one per day) in geographic sequence.
-        Falls back to even splitting when too few routable places exist.
-        """
-        valid = pool.dropna(subset=['_lat', '_lng']).copy()
-        valid = valid[valid['_lat'].between(9.0, 15.5) & valid['_lng'].between(102.0, 108.0)]
-
-        if len(valid) < n_days * 2:
-            # Too sparse for meaningful clustering — split evenly
-            chunk = max(1, len(pool) // n_days)
-            return [pool.iloc[i * chunk:(i + 1) * chunk] for i in range(n_days)]
-
-        n_clusters = min(n_days, len(valid))
-        km = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-        valid['_cluster'] = km.fit_predict(valid[['_lat', '_lng']].values)
-        centroids = km.cluster_centers_  # (n_clusters, 2): [lat, lng]
-
-        # Order clusters geographically using nearest-neighbour on centroids
-        # so Day 1 → Day 2 → Day 3 follows a logical path across the province
-        order = [0]
-        remaining = list(range(1, n_clusters))
-        while remaining:
-            last = centroids[order[-1]]
-            nearest = min(
-                remaining,
-                key=lambda c: (centroids[c][0] - last[0]) ** 2 + (centroids[c][1] - last[1]) ** 2
-            )
-            order.append(nearest)
-            remaining.remove(nearest)
-
-        return [valid[valid['_cluster'] == c] for c in order]
-
     # ── Resolve mode settings ─────────────────────────────────────────────────
     zone_divisor, hotel_every, per_day_mult = MODE_CONFIG.get(req.mode, MODE_CONFIG["balanced"])
     effective_per_day = max(1, round(req.perDay * per_day_mult))
 
-    # n_zones: adventure=n_days zones, balanced=ceil(n_days/2), chill=1
-    n_zones = max(1, -(-req.days // zone_divisor))  # ceiling division
-    day_clusters = _cluster_activities(activities_pool, n_zones)
-
-    # Map each day to a cluster index (chill=all days share cluster 0)
-    def _day_cluster(day_idx: int) -> pd.DataFrame:
-        cluster_idx = min(day_idx // zone_divisor, len(day_clusters) - 1)
-        return day_clusters[cluster_idx]
+    # ── Global trip GA: select + assign-to-day + rough order across the WHOLE trip ──
+    # Replaces per-day clustering+sampling. Candidate set = top-scored activities
+    # (over-sampled so the GA has room to choose); the GA then keeps the subset that
+    # forms tight, high-score days. Per-day GA (_optimize_route) polishes order after.
+    total_needed = req.days * effective_per_day
+    cand_count = min(len(activities_pool), max(total_needed * 3, total_needed + 15))
+    candidates = activities_pool.head(cand_count)
+    # chill mode → reward whole-trip compactness (days clustered, shared hotel)
+    cont_w = 1.0 if req.mode == "chill" else 0.0
+    day_assignments = _optimize_trip_global(
+        candidates, req.days, effective_per_day, lambda_cont=cont_w
+    )
 
     used_activity_ids: set = set()
     used_stay_ids: set = set()
@@ -873,17 +985,25 @@ def generate_trip_endpoint(req: TripRequest):
 
     itinerary = []
     for day in range(1, req.days + 1):
-        cluster = _day_cluster(day - 1)
+        # Activities for this day come from the global trip GA (already selected,
+        # assigned to this day, and roughly ordered).
+        day_act_df = day_assignments[day - 1] if day - 1 < len(day_assignments) else pd.DataFrame()
 
-        # Sample activities from this day's geographic zone
-        day_act_df = _weighted_sample(cluster, effective_per_day, used_activity_ids)
-        # Top up from full pool if zone was sparse
+        # Day centroid: anchor for any top-up so fill-ins stay near the day's places.
+        day_coords = day_act_df.dropna(subset=['_lat', '_lng']) if not day_act_df.empty else day_act_df
+        day_centroid = (
+            (day_coords['_lat'].mean(), day_coords['_lng'].mean())
+            if not day_coords.empty else None
+        )
+
+        # Top up if the GA returned a short day (sparse pool) — proximity-anchored.
         if len(day_act_df) < effective_per_day:
             extra = _weighted_sample(
                 activities_pool, effective_per_day - len(day_act_df),
-                used_activity_ids | set(day_act_df['id'])
+                used_activity_ids | (set(day_act_df['id']) if not day_act_df.empty else set()),
+                centroid=day_centroid
             )
-            day_act_df = pd.concat([day_act_df, extra])
+            day_act_df = pd.concat([day_act_df, extra]) if not day_act_df.empty else extra
 
         # Compute centroid of today's sampled activities
         act_with_coords = day_act_df.dropna(subset=['_lat', '_lng'])
