@@ -1,150 +1,111 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, provide, watch, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import HeroSearchBar from './components/HeroSearchBar.vue'
-import InterestStep from './components/InterestStep.vue'
-import StayDineStep from './components/StayDineStep.vue'
-import ResultView from './components/ResultView.vue'
-import axios from 'axios'
 
-const currentStep = ref(0) // 0: Search form, 4: Result View
-const loading = ref(false)
-const apiError = ref('')
-
+const route = useRoute()
 const isScrolled = ref(false)
+const isHidden = ref(false)
+let lastScrollY = 0
+
+const isHome = computed(() => route.path === '/')
+const isResultMode = computed(() => route.path === '/itinerary')
+
+// Provide this to children if they still need it (like for manual overrides), 
+// but most should now rely on the route.
+provide('setResultMode', (val) => {
+  // Manual override if absolutely necessary, but preferred to use route
+})
+
+// CRITICAL: Reset hidden state whenever the route changes.
+watch(() => route.path, () => {
+  isHidden.value = false
+})
 
 const handleScroll = () => {
-  isScrolled.value = (window.pageYOffset || document.documentElement.scrollTop) > 20
+  const currentScrollY = window.pageYOffset || document.documentElement.scrollTop
+  
+  // Show/Hide logic: Hide when scrolling down, show when scrolling up
+  if (currentScrollY > lastScrollY && currentScrollY > 150) {
+    isHidden.value = true
+  } else {
+    isHidden.value = false
+  }
+  
+  isScrolled.value = currentScrollY > 20
+  lastScrollY = currentScrollY
+}
+
+const handleInternalScroll = (e) => {
+  const currentScrollY = e.detail.scrollTop
+  
+  if (currentScrollY > lastScrollY && currentScrollY > 100) {
+    isHidden.value = true
+  } else {
+    isHidden.value = false
+  }
+  
+  isScrolled.value = currentScrollY > 20
+  lastScrollY = currentScrollY
 }
 
 onMounted(() => {
-  window.addEventListener('scroll', handleScroll)
+  window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('internal-scroll', handleInternalScroll, { passive: true })
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('internal-scroll', handleInternalScroll)
 })
-
-// State — default activities so search works immediately without forcing selection
-const formData = ref({
-  province: '',
-  days: 3,
-  perDay: 3,
-  activities: ['Temple', 'Museum', 'Landmark'],
-  accommodation: 'Hotel',
-  dining: 'Restaurant'
-})
-
-const itineraryResult = ref(null)
-
-const fetchItinerary = async () => {
-  loading.value = true
-  apiError.value = ''
-  currentStep.value = 4
-
-  try {
-    const response = await axios.post('/api/generate-trip', formData.value, { timeout: 30000 })
-    itineraryResult.value = response.data
-  } catch (error) {
-    console.error("Error generating trip:", error)
-    if (error.code === 'ECONNABORTED') {
-      apiError.value = 'Request timed out. The server is taking too long to respond.'
-    } else if (error.response?.data?.detail) {
-      apiError.value = error.response.data.detail
-    } else {
-      apiError.value = 'Could not connect to the server. Please make sure the backend is running.'
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-// Restart Trip
-const handleRestart = () => {
-  currentStep.value = 0
-  itineraryResult.value = null
-}
 </script>
 
 <template>
-  <div class="app-container" :class="{ 'result-layout': currentStep === 4 }">
+  <div class="app-container" :class="{ 'is-result-mode': isResultMode }">
     <!-- Header -->
-    <header class="top-header" :class="{ 'header-scrolled': isScrolled }">
+    <header 
+      class="top-header" 
+      :class="{ 
+        'header-scrolled': isScrolled,
+        'header-transparent': isHome && !isScrolled && !isResultMode,
+        'header-hidden': isHidden
+      }"
+    >
       <div class="header-inner">
         <!-- Brand -->
-        <div class="header-brand">
+        <router-link to="/" class="header-brand">
           <img src="/nextgen-logo.png" alt="NextGen Logo" class="logo-img" />
           <div class="brand-text">
             <span class="brand-name">Sak Tmor</span>
             <span class="brand-tag">AI Trip Planner · Cambodia</span>
           </div>
-        </div>
+        </router-link>
 
         <!-- Nav -->
         <nav class="header-nav">
-          <a class="nav-link" href="#">Destinations</a>
-          <a class="nav-link" href="#">How It Works</a>
-          <a class="nav-link" href="#">About</a>
-          <button
-            v-if="currentStep === 4"
-            class="header-cta"
-            @click="handleRestart"
+          <router-link class="nav-link" to="/">Home</router-link>
+          <router-link class="nav-link" to="/destinations">Destinations</router-link>
+          <router-link class="nav-link" to="/how-it-works">How It Works</router-link>
+          <router-link class="nav-link" to="/about">About</router-link>
+          <router-link
+            v-if="!isResultMode"
+            to="/"
+            class="header-cta bg-gold-gradient"
           >
-            <Icon icon="mdi:plus" width="15" height="15" />
-            New Trip
-          </button>
+            <Icon icon="lucide:plus" width="16" height="16" />
+            Plan Trip
+          </router-link>
         </nav>
       </div>
     </header>
 
-    <!-- Content switches between Search Page & Result Page -->
-    <div v-if="currentStep === 0" class="search-page">
-      <!-- Hero Banner -->
-      <section class="hero-banner">
-        <div class="hero-content">
-          <h2 class="khmer-title khmer">កម្មវិធីរៀបចំផែនការធ្វើដំណើរ</h2>
-          <h1 class="main-title">Automating Your Trip Planning Experience</h1>
-          <p class="subtitle">Tell us your preferences and get an instant AI-generated itinerary</p>
-        </div>
-      </section>
-
-      <!-- The New Search Bar Floating Over Hero -->
-      <HeroSearchBar
-        v-model="formData"
-        @search="fetchItinerary"
-      />
-
-      <!-- Preferences always visible below search -->
-      <main class="wizard-container mt-8">
-        <div class="preferences-card">
-          <div class="filters-grid">
-            <div class="filter-col">
-              <InterestStep
-                v-model="formData.activities"
-                :embedded="true"
-              />
-            </div>
-            <div class="filter-divider"></div>
-            <div class="filter-col">
-              <StayDineStep
-                v-model:accommodation="formData.accommodation"
-                v-model:dining="formData.dining"
-                @submit="fetchItinerary"
-                :embedded="true"
-              />
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <!-- RESULT PAGE -->
-    <main v-else-if="currentStep === 4" class="result-page">
-      <ResultView :loading="loading" :result="itineraryResult" :error="apiError" @restart="handleRestart" />
+    <!-- Content -->
+    <main class="main-content" :class="{ 'is-home-page': isHome, 'is-result-mode': isResultMode }">
+      <router-view />
     </main>
 
-    <!-- Footer: hidden on result page so the two-panel layout fills the screen -->
-    <footer class="app-footer" v-if="currentStep !== 4">
+    <!-- Footer -->
+    <footer v-if="!isResultMode" class="app-footer bg-royal-gradient">
       <div class="footer-inner">
 
         <!-- Col 1: Brand -->
@@ -165,11 +126,11 @@ const handleRestart = () => {
         <div class="footer-col">
           <h4 class="footer-heading">Explore</h4>
           <ul class="footer-links">
-            <li><a href="#">Phnom Penh</a></li>
-            <li><a href="#">Siem Reap</a></li>
-            <li><a href="#">Sihanoukville</a></li>
-            <li><a href="#">Kampot & Kep</a></li>
-            <li><a href="#">Battambang</a></li>
+            <li><router-link to="/destinations">Phnom Penh</router-link></li>
+            <li><router-link to="/destinations">Siem Reap</router-link></li>
+            <li><router-link to="/destinations">Sihanoukville</router-link></li>
+            <li><router-link to="/destinations">Kampot & Kep</router-link></li>
+            <li><router-link to="/destinations">Battambang</router-link></li>
           </ul>
         </div>
 
@@ -177,8 +138,8 @@ const handleRestart = () => {
         <div class="footer-col">
           <h4 class="footer-heading">Company</h4>
           <ul class="footer-links">
-            <li><a href="#">About Us</a></li>
-            <li><a href="#">How It Works</a></li>
+            <li><router-link to="/about">About Us</router-link></li>
+            <li><router-link to="/how-it-works">How It Works</router-link></li>
             <li><a href="#">Privacy Policy</a></li>
             <li><a href="#">Terms of Use</a></li>
           </ul>
@@ -208,7 +169,7 @@ const handleRestart = () => {
       <!-- Bottom bar -->
       <div class="footer-bottom">
         <p>&copy; 2026 NextGen. All Rights Reserved.</p>
-        <p>Built with <Icon icon="mdi:heart" width="13" height="13" style="color:#E5A517;vertical-align:middle" /> by NextGen Students</p>
+        <p>Built with <Icon icon="mdi:heart" width="13" height="13" style="color:hsl(var(--gold));vertical-align:middle" /> by NextGen Students</p>
       </div>
     </footer>
   </div>
@@ -223,253 +184,148 @@ const handleRestart = () => {
   width: 100%;
 }
 
-/* In result mode: lock to exact viewport height so nothing overflows */
-.app-container.result-layout {
+/* Only lock the screen when in result mode */
+.app-container.is-result-mode {
   height: 100vh;
   overflow: hidden;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
-.top-header {
-  background-color: var(--surface-color);
-  width: 100%;
-  padding: 0 var(--spacing-container);
-  z-index: 100;
-  position: sticky;
-  top: 0;
-  flex-shrink: 0;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  border-bottom: 1px solid transparent;
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 72px; /* Header height */
 }
 
-.top-header.header-scrolled {
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom-color: rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+.main-content.is-home-page {
+  padding-top: 0;
+}
+
+.is-result-mode .main-content {
+  min-height: 0;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.top-header {
+  background-color: hsl(var(--midnight));
+  width: 100%;
+  padding: 0 var(--spacing-container);
+  z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  flex-shrink: 0;
+  height: 72px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-transparent {
+  background-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.header-scrolled {
+  background-color: hsl(var(--midnight) / 0.98);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  height: 64px;
+}
+
+.header-hidden {
+  transform: translateY(-100%);
 }
 
 .header-inner {
   max-width: 1280px;
   margin: 0 auto;
-  height: 72px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
-  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.top-header.header-scrolled .header-inner,
-.app-container.result-layout .header-inner {
-  height: 60px;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   text-decoration: none;
   flex-shrink: 0;
 }
 
 .logo-img {
-  height: 36px;
+  height: 38px;
   width: auto;
-  object-fit: contain;
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-scrolled .logo-img {
+  height: 32px;
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  border-left: 1.5px solid var(--border-color);
-  padding-left: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 1rem;
 }
 
 .brand-name {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--primary-color);
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: white;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
 .brand-tag {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.02em;
+  color: hsla(0, 0%, 100%, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .header-nav {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 1.5rem;
 }
 
 .nav-link {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  padding: 0.4rem 0.75rem;
-  border-radius: var(--radius-md);
+  color: hsla(0, 0%, 100%, 0.7);
   text-decoration: none;
-  transition: color 0.15s, background 0.15s;
+  transition: all 0.2s;
 }
 
-.nav-link:hover {
-  color: var(--primary-color);
-  background: var(--bg-color);
+.nav-link:hover, .router-link-active.nav-link {
+  color: hsl(var(--gold));
 }
 
 .header-cta {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  background: var(--accent-color);
-  color: var(--primary-color);
-  font-size: 0.85rem;
-  font-weight: 800;
-  padding: 0.45rem 1rem;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  margin-left: 0.5rem;
-  transition: background 0.15s, transform 0.15s;
+  gap: 0.5rem;
+  color: hsl(var(--primary));
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.625rem 1.25rem;
+  transition: transform 0.2s;
+  border-radius: var(--radius);
 }
 
 .header-cta:hover {
-  background: var(--accent-hover);
   transform: translateY(-1px);
-}
-
-.search-page {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.hero-banner {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  color: var(--text-inverse);
-  padding: 2.5rem var(--spacing-container) 4rem var(--spacing-container);
-  text-align: center;
-  position: relative;
-}
-
-.hero-banner::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-image: radial-gradient(circle at 50% 100%, rgba(229, 165, 23, 0.08) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.hero-content {
-  max-width: 800px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 10;
-}
-
-.khmer-title {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  color: var(--accent-color);
-  letter-spacing: 0.05em;
-}
-
-.main-title {
-  font-size: 2.2rem;
-  font-weight: 800;
-  margin-bottom: 0.75rem;
-  line-height: 1.2;
-}
-
-.subtitle {
-  font-size: 1rem;
-  opacity: 0.9;
-  font-weight: 400;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.mt-8 {
-  margin-top: 2rem;
-}
-
-.wizard-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 var(--spacing-container);
-  margin-bottom: 3rem;
-  z-index: 20;
-  width: 100%;
-}
-
-.result-page {
-  flex: 1;
-  min-height: 0;   /* allows flex child to shrink below content size */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* PREFERENCES CARD — always visible below search */
-.preferences-card {
-  background-color: var(--surface-color);
-  width: 100%;
-  max-width: 1000px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 2rem 2.5rem;
-  border: 1px solid var(--border-color);
-}
-
-.filters-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.filter-col {
-  flex: 1;
-}
-
-.filter-divider {
-  height: 1px;
-  width: 100%;
-  background: var(--border-color);
-}
-
-/* WIZARD CARD (Used solely for ResultView now) */
-.wizard-card {
-  background-color: var(--surface-color);
-  width: 100%;
-  max-width: 1280px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-}
-
-.wizard-card.result-mode {
-  padding: 0;
-  overflow: hidden;
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 .app-footer {
-  background-color: var(--midnight);
-  color: var(--text-inverse);
-  padding: 4rem var(--spacing-container) 2rem var(--spacing-container);
+  color: white;
+  padding: 5rem var(--spacing-container) 2rem var(--spacing-container);
   margin-top: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .footer-inner {
@@ -477,153 +333,144 @@ const handleRestart = () => {
   margin: 0 auto;
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1.5fr;
-  gap: 3rem;
-  margin-bottom: 3rem;
+  gap: 4rem;
+  margin-bottom: 4rem;
 }
 
 .footer-brand {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .footer-logo-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .footer-logo {
-  height: 32px;
-  width: auto;
+  height: 36px;
+  filter: brightness(0) invert(1);
 }
 
 .footer-brand-name {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--accent-color);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: hsl(var(--gold));
   letter-spacing: -0.02em;
 }
 
 .footer-tagline {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.6;
-  color: var(--text-light);
+  opacity: 0.7;
   max-width: 320px;
 }
 
 .footer-socials {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .social-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-inverse);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: var(--radius);
   transition: all 0.2s;
 }
 
 .social-btn:hover {
-  background: var(--accent-color);
-  color: var(--primary-color);
+  background: hsl(var(--gold));
+  color: hsl(var(--primary));
   transform: translateY(-3px);
 }
 
 .footer-col {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .footer-heading {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--surface-color);
+  letter-spacing: 0.1em;
+  color: hsl(var(--gold));
 }
 
 .footer-links {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .footer-links a {
   font-size: 0.9rem;
-  color: var(--text-light);
-  transition: color 0.15s;
+  opacity: 0.7;
+  transition: opacity 0.2s, color 0.2s;
 }
 
 .footer-links a:hover {
-  color: var(--accent-color);
+  opacity: 1;
+  color: hsl(var(--gold));
 }
 
 .footer-contact {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .footer-contact li {
   display: flex;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--text-light);
+  gap: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.7;
   line-height: 1.5;
 }
 
 .footer-contact li .iconify {
   flex-shrink: 0;
-  color: var(--accent-color);
-  margin-top: 0.2rem;
+  color: hsl(var(--gold));
+  margin-top: 0.25rem;
 }
 
 .footer-bottom {
   max-width: 1280px;
   margin: 0 auto;
-  padding-top: 2rem;
+  padding-top: 2.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .footer-bottom p {
-  font-size: 0.8rem;
-  color: var(--text-light);
+  font-size: 0.85rem;
+  opacity: 0.6;
 }
 
 @media (max-width: 1024px) {
   .footer-inner {
     grid-template-columns: 1fr 1fr;
-    gap: 2.5rem;
+    gap: 3rem;
   }
 }
 
 @media (max-width: 640px) {
   .footer-inner {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 2.5rem;
   }
-  .footer-bottom {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-@media (max-width: 768px) {
-  .preferences-card { padding: 1.5rem 1rem; }
-  .filters-grid { gap: 1.5rem; }
-  .main-title { font-size: 1.5rem; }
-  .hero-banner { padding: 1.5rem 1rem 3rem 1rem; }
+  .header-nav { display: none; }
 }
 </style>

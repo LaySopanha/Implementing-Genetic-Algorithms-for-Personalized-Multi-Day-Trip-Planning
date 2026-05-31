@@ -1,6 +1,6 @@
 <script setup>
 import { Icon } from '@iconify/vue'
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -17,6 +17,8 @@ const props = defineProps({
   error: { type: String, default: '' }
 })
 
+const emit = defineEmits(['restart'])
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const parseAmenities = (amn) => Array.isArray(amn) ? amn : []
@@ -26,7 +28,7 @@ const isReadableAddress = (addr) => {
   return addr.replace(/[^a-zA-Z0-9\s,.\-]/g, '').trim().length > 5
 }
 
-const hasRealImage = (url) => url && url.startsWith('http')
+const hasRealImage = (url) => url && (url.startsWith('http') || url.startsWith('/'))
 
 const isValidCoord = (lat, lng) =>
   lat >= 9.0 && lat <= 15.5 && lng >= 102.0 && lng <= 108.0
@@ -103,7 +105,6 @@ const getDaySchedule = (dayObj) => {
     schedule.push({ place: stay, type: 'stay', timeLabel: formatTime(t), note: 'Return to Hotel' })
   }
 
-  // Calculate distances between consecutive stops
   for (let i = 0; i < schedule.length - 1; i++) {
     const dist = haversineDistance(schedule[i].place, schedule[i + 1].place)
     schedule[i].distToNext = dist
@@ -112,33 +113,67 @@ const getDaySchedule = (dayObj) => {
   return schedule
 }
 
-// Build ordered route from the full schedule (hotel → acts + meals → hotel)
 const getDayRoute = (dayObj) => {
   return getDaySchedule(dayObj)
     .map(item => item.place)
     .filter(p => p.lat && p.lng && isValidCoord(p.lat, p.lng))
 }
 
-// ── Active day tab state ──────────────────────────────────────────────────────
+// ── State ───────────────────────────────────────────────────────────────────
 
 const activeDay = ref(1)
 const selectedPlace = ref(null)
+const isMapFull = ref(false)
 
 const setDay = (day) => { 
   activeDay.value = day
   selectedPlace.value = null
 }
 
+const toggleMap = () => {
+  isMapFull.value = !isMapFull.value
+  setTimeout(() => mapInstance?.invalidateSize(), 300)
+}
+
 // ── Map ───────────────────────────────────────────────────────────────────────
 
 const mapContainer = ref(null)
+const timelineContainer = ref(null)
 const routeLoading = ref(false)
+
+const handleTimelineScroll = (e) => {
+  const scrollEvent = new CustomEvent('internal-scroll', {
+    detail: { scrollTop: e.target.scrollTop }
+  })
+  window.dispatchEvent(scrollEvent)
+}
+
+const loadingMessages = [
+  "Consulting local experts...",
+  "Finding hidden gems...",
+  "Optimizing your travel route...",
+  "Selecting authentic Khmer dining...",
+  "Balancing your adventure...",
+  "Finalizing your personalized plan..."
+]
+const currentMessageIndex = ref(0)
+let messageInterval = null
+
+watch(() => props.loading, (isLoading) => {
+  if (isLoading) {
+    currentMessageIndex.value = 0
+    messageInterval = setInterval(() => {
+      currentMessageIndex.value = (currentMessageIndex.value + 1) % loadingMessages.length
+    }, 2500)
+  } else {
+    clearInterval(messageInterval)
+  }
+}, { immediate: true })
+
 let mapInstance = null
 let markersGroup = null
 const markerMap = new Map()
 
-// Fetch road geometry from OSRM (free, no API key).
-// Falls back to straight lines if the request fails.
 const fetchRoadRoute = async (places) => {
   if (places.length < 2) return places.map(p => [p.lat, p.lng])
   const coords = places.map(p => `${p.lng},${p.lat}`).join(';')
@@ -150,53 +185,37 @@ const fetchRoadRoute = async (places) => {
     if (!res.ok) throw new Error('bad response')
     const data = await res.json()
     if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
-      // OSRM returns [lng, lat]; Leaflet needs [lat, lng]
       return data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng])
     }
   } catch {
-    console.warn('OSRM routing unavailable — drawing straight lines as fallback')
+    console.warn('OSRM routing unavailable')
   }
   return places.map(p => [p.lat, p.lng])
 }
 
-const ROUTE_COLORS = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#8e44ad', '#e67e22']
+const ROUTE_COLORS = ['#102050', '#E5A517', '#1ABC9C', '#8E44AD', '#E74C3C', '#2C3E50']
 
 const SVG_BED  = `<path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/>`
 const SVG_PIN  = `<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>`
 const SVG_FORK = `<path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>`
 
-const makeMapIcon = (svgPath, bg, size = 34) => L.divIcon({
-  html: `<div style="background:${bg};width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.28)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${Math.round(size*.54)}" height="${Math.round(size*.54)}" fill="white">${svgPath}</svg></div>`,
+const makeMapIcon = (svgPath, bg, size = 32) => L.divIcon({
+  html: `<div style="background:${bg};width:${size}px;height:${size}px;border-radius:2px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:var(--shadow-md)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="white">${svgPath}</svg></div>`,
   iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2], className: ''
 })
 
-const makeNumIcon = (num, bg, size = 30) => L.divIcon({
-  html: `<div style="background:${bg};width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.28);font-weight:800;font-size:13px;color:white;font-family:Inter,sans-serif">${num}</div>`,
+const makeNumIcon = (num, bg, size = 28) => L.divIcon({
+  html: `<div style="background:${bg};width:${size}px;height:${size}px;border-radius:2px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:var(--shadow-md);font-weight:800;font-size:12px;color:white;font-family:Inter,sans-serif">${num}</div>`,
   iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2], className: ''
 })
-
-const makePopup = (place, t1, t2) => {
-  const img = hasRealImage(place.image_url)
-    ? `background-image:url('${place.image_url}');background-size:cover;background-position:center`
-    : `background:#e2e8f0`
-  const time = t1 ? `<div style="font-size:11px;color:#E5A517;font-weight:700;margin-top:5px">${t1}${t2 ? ' – ' + t2 : ''}</div>` : ''
-  return `<div style="width:210px;font-family:Inter,sans-serif">
-    <div style="height:110px;border-radius:8px 8px 0 0;${img}"></div>
-    <div style="padding:10px 12px">
-      <div style="font-size:10px;font-weight:800;color:#102050;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${place.category}</div>
-      <div style="font-size:13px;font-weight:800;color:#0f172a;line-height:1.3">${place.title}</div>
-      <div style="font-size:11px;color:#64748b;margin-top:3px">&#9733; ${place.rating} &middot; ${place.reviews} reviews</div>
-      ${time}
-    </div>
-  </div>`
-}
 
 const initMap = () => {
   if (!mapContainer.value || mapInstance) return
-  mapInstance = L.map(mapContainer.value).setView([12.5657, 104.9910], 7)
+  mapInstance = L.map(mapContainer.value, { zoomControl: false }).setView([12.5657, 104.9910], 7)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
+    attribution: '&copy; OpenStreetMap contributors'
   }).addTo(mapInstance)
+  L.control.zoom({ position: 'bottomright' }).addTo(mapInstance)
   markersGroup = L.featureGroup().addTo(mapInstance)
 }
 
@@ -209,43 +228,57 @@ const plotDay = async (dayNum) => {
 
   const color = ROUTE_COLORS[(dayNum - 1) % ROUTE_COLORS.length]
 
-  // Place all markers first so the map is interactive immediately
   let actNum = 0
   getDaySchedule(dayObj).forEach(item => {
     const p = item.place
     if (!p.lat || !p.lng || !isValidCoord(p.lat, p.lng)) return
     const icon = item.type === 'stay'
-      ? makeMapIcon(SVG_BED, '#102050')
+      ? makeMapIcon(SVG_BED, 'hsl(var(--primary))')
       : item.type === 'dining'
-        ? makeMapIcon(SVG_FORK, '#c98e0e')
+        ? makeMapIcon(SVG_FORK, 'hsl(var(--gold))')
         : makeNumIcon(++actNum, color)
-    const marker = L.marker([p.lat, p.lng], { icon })
-      .bindPopup(makePopup(p, item.timeLabel, item.endTimeLabel), { 
-        maxWidth: 230, 
-        className: 'custom-popup',
-        autoPan: false // Prevent popup from shifting the map away from center
-      })
-      .addTo(markersGroup)
+    const marker = L.marker([p.lat, p.lng], { icon }).addTo(markersGroup)
     
+    // Add interactive popup
+    const popupContent = `
+      <div style="font-family: 'Inter', sans-serif; min-width: 180px; padding: 2px;">
+        ${hasRealImage(p.image_url) ? `
+          <div style="width: 100%; height: 100px; background-image: url('${p.image_url}'); background-size: cover; background-position: center; border-radius: 4px; margin-bottom: 8px; background-color: #102050;"></div>
+        ` : ''}
+        <div style="padding: 0 2px;">
+          <div style="font-weight: 800; color: #102050; font-size: 14px; line-height: 1.2; margin-bottom: 2px;">${p.title}</div>
+          <div style="font-size: 10px; color: #E5A517; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">${p.category}</div>
+          ${isReadableAddress(p.address) ? `<div style="font-size: 11px; color: #64748b; margin-top: 6px; line-height: 1.3;">${p.address}</div>` : ''}
+        </div>
+      </div>
+    `
+    marker.bindPopup(popupContent, { 
+      closeButton: false, 
+      offset: L.point(0, -15),
+      className: 'custom-map-popup'
+    })
+
+    // Click marker to focus in timeline
+    marker.on('click', () => {
+      selectedPlace.value = p.title
+    })
+
     markerMap.set(p.title, marker)
   })
 
   if (markersGroup.getLayers().length > 0)
-    try { mapInstance.fitBounds(markersGroup.getBounds(), { padding: [48, 48] }) } catch (_) {}
+    try { mapInstance.fitBounds(markersGroup.getBounds(), { padding: [60, 60] }) } catch (_) {}
 
-  // Fetch road-following route from OSRM (includes hotel + dining + activities)
   const routePlaces = getDayRoute(dayObj)
   if (routePlaces.length >= 2) {
     routeLoading.value = true
     const roadCoords = await fetchRoadRoute(routePlaces)
     routeLoading.value = false
-    // Draw solid line if we got real road geometry, dashed as fallback
-    const isRoad = roadCoords.length > routePlaces.length
     L.polyline(roadCoords, {
       color,
-      weight: 4,
-      opacity: 0.85,
-      className: 'animated-path'
+      weight: 3,
+      opacity: 0.6,
+      dashArray: '8, 8'
     }).addTo(markersGroup)
   }
 }
@@ -253,17 +286,13 @@ const plotDay = async (dayNum) => {
 const focusPlace = (place) => {
   if (!place.lat || !place.lng || !mapInstance) return
   selectedPlace.value = place.title
+  mapInstance.flyTo([place.lat, place.lng], 15, { duration: 0.8 })
   
-  // First open the popup
+  // Open marker popup
   const marker = markerMap.get(place.title)
-  if (marker) marker.openPopup()
-  
-  // Use flyTo with a smoother curve to ensure it's dead center
-  mapInstance.flyTo([place.lat, place.lng], 16, {
-    animate: true,
-    duration: 0.8,
-    easeLinearity: 0.25
-  })
+  if (marker) {
+    marker.openPopup()
+  }
 }
 
 watch(() => props.result, async (val) => {
@@ -272,756 +301,809 @@ watch(() => props.result, async (val) => {
 
 watch(activeDay, (day) => { if (props.result?.itinerary) plotDay(day) })
 
-onMounted(() => { if (props.result) { initMap(); plotDay(activeDay.value) } })
+onMounted(() => { 
+  if (props.result) { initMap(); plotDay(activeDay.value) } 
+  if (timelineContainer.value) {
+    timelineContainer.value.addEventListener('scroll', handleTimelineScroll, { passive: true })
+  }
+})
+
+onBeforeUnmount(() => {
+  if (messageInterval) clearInterval(messageInterval)
+  if (timelineContainer.value) {
+    timelineContainer.value.removeEventListener('scroll', handleTimelineScroll)
+  }
+})
 </script>
 
 <template>
-  <div class="rr">
+  <div class="result-container" :class="{ 'map-expanded': isMapFull }">
 
-    <!-- ── Loading ─────────────────────────────────────────────────── -->
-    <div v-if="loading" class="state-view">
-      <Icon icon="mdi:loading" class="spin" width="52" height="52" style="color:var(--accent-color)" />
-      <h2>Crafting your itinerary…</h2>
-      <p>Analysing thousands of locations for your perfect trip.</p>
+    <!-- ── State views ───────────────────────────────────────── -->
+    <div v-if="loading" class="overlay-view loading-overlay">
+      
+
+      <div class="loading-content">
+        <div class="lottie-container">
+          <dotlottie-wc 
+            src="https://lottie.host/7f58f712-2682-44e4-ace4-fe2a09a5642d/Sx57y2ZMT5.lottie" 
+            style="width: 320px; height: 320px" 
+            :autoplay="true" 
+            :loop="true"
+          ></dotlottie-wc>
+        </div>
+        
+        <div class="loading-text-wrapper">
+          <h2 class="loading-title">Creating Your Journey</h2>
+          <Transition name="fade-up" mode="out-in">
+            <p :key="currentMessageIndex" class="loading-subtitle">
+              {{ loadingMessages[currentMessageIndex] }}
+            </p>
+          </Transition>
+        </div>
+
+        <div class="loading-progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- ── Error ───────────────────────────────────────────────────── -->
-    <div v-else-if="!result?.itinerary" class="state-view">
-      <Icon icon="mdi:alert-circle-outline" width="48" height="48" style="color:var(--text-light);margin-bottom:.75rem" />
-      <h2>Something went wrong</h2>
-      <p>{{ error || "Couldn't generate a trip. Try adjusting your filters." }}</p>
-      <button class="btn-primary" @click="$emit('restart')">Try Again</button>
+    <div v-else-if="!result?.itinerary" class="overlay-view">
+      <div class="error-box nextgen-card">
+        <Icon icon="mdi:alert-circle-outline" width="48" height="48" style="color:#ef4444" />
+        <h2>Generation Failed</h2>
+        <p>{{ error || "We couldn't create a valid itinerary with these preferences." }}</p>
+        <button class="btn-primary" @click="$emit('restart')">Modify Search</button>
+      </div>
     </div>
 
-    <!-- ── Main result layout ──────────────────────────────────────── -->
-    <div v-else class="trip-layout">
-
-      <!-- Top bar: title + start over -->
-      <header class="trip-bar">
-        <div class="trip-bar-left">
-          <div class="title-row">
-            <h1 class="trip-title">{{ result.total_days }} Days in <em>{{ result.province }}</em></h1>
-            <span class="chip">
-              <Icon icon="mdi:check-circle-outline" width="12" height="12" />
-              Trip Ready
-            </span>
+    <!-- ── Dashboard Layout ──────────────────────────────────────── -->
+    <div v-else class="dashboard">
+      
+      <!-- Side Navigation / Itinerary Pane -->
+      <aside class="itinerary-pane">
+        
+        <!-- Compact Header -->
+        <header class="pane-header">
+          <div class="header-main">
+            <div class="title-group">
+              <h1 class="itinerary-title">Trip to {{ result.province }}</h1>
+              <div class="header-meta">
+                <span class="meta-item">{{ result.total_days }} Days</span>
+                <span class="meta-dot"></span>
+                <span class="meta-item">{{ result.itinerary.reduce((acc, d) => acc + (d.activities?.length || 0), 0) }} Sites</span>
+                <template v-if="result.itinerary[activeDay - 1]">
+                  <span class="meta-dot"></span>
+                  <span class="meta-item text-gold">{{ result.itinerary[activeDay - 1].distance_km }} KM Today</span>
+                </template>
+              </div>
+            </div>
+            <button class="btn-restart" @click="$emit('restart')" title="Start Over">
+              <Icon icon="lucide:refresh-cw" width="14" height="14" />
+            </button>
           </div>
-        </div>
-        <button class="btn-outline" @click="$emit('restart')">
-          <Icon icon="mdi:refresh" width="15" height="15" />
-          Start Over
-        </button>
-      </header>
+        </header>
 
-      <!-- Day tab bar -->
-      <nav class="day-tabs-container">
-        <div class="day-tabs">
-          <div 
-            class="day-pill-bg" 
-            :style="{ 
-              width: `calc(100% / ${result.itinerary.length})`,
-              transform: `translateX(${(activeDay - 1) * 100}%)`
-            }"
-          ></div>
-          <button
-            v-for="dayObj in result.itinerary"
-            :key="dayObj.day"
-            class="day-tab"
-            :class="{ active: activeDay === dayObj.day }"
-            @click="setDay(dayObj.day)"
-          >
-            <span class="dt-label">Day {{ dayObj.day }}</span>
-            <span class="dt-meta" v-if="dayObj.distance_km > 0">
-              {{ dayObj.distance_km }} km
-            </span>
-          </button>
-        </div>
-      </nav>
-
-      <!-- Body: schedule list + map -->
-      <div class="trip-body">
-
-        <!-- Schedule pane (scrolls naturally) -->
-        <div class="schedule-pane">
-          <template v-for="dayObj in result.itinerary" :key="dayObj.day">
-            <TransitionGroup 
-              v-show="activeDay === dayObj.day" 
-              name="stagger" 
-              tag="div" 
-              class="schedule"
+        <!-- Day Selector -->
+        <nav class="day-nav">
+          <div class="day-scroll">
+            <button 
+              v-for="d in result.itinerary" 
+              :key="d.day"
+              class="day-chip"
+              :class="{ active: activeDay === d.day }"
+              @click="setDay(d.day)"
             >
-              <div
-                v-for="(item, idx) in getDaySchedule(dayObj)"
+              Day {{ d.day }}
+            </button>
+          </div>
+        </nav>
+
+        <!-- Timeline Content -->
+        <main ref="timelineContainer" class="timeline-container">
+          <template v-for="dayObj in result.itinerary" :key="dayObj.day">
+            <div v-if="activeDay === dayObj.day" class="timeline">
+              
+              <div 
+                v-for="(item, idx) in getDaySchedule(dayObj)" 
                 :key="item.place.title + idx"
-                class="sched-row"
-                :class="['t-' + item.type, { 'selected': selectedPlace === item.place.title }]"
-                :style="{ '--index': idx }"
+                class="timeline-item"
+                :class="['type-' + item.type, { 'is-selected': selectedPlace === item.place.title }]"
+                @click="focusPlace(item.place)"
               >
-                <!-- Time -->
-                <div class="sched-time">
-                  <span class="st-start">{{ item.timeLabel }}</span>
-                  <span v-if="item.endTimeLabel" class="st-end">{{ item.endTimeLabel }}</span>
+                <!-- Time/Marker Column -->
+                <div class="item-marker">
+                  <span class="item-time">{{ item.timeLabel }}</span>
+                  <div class="marker-dot">
+                    <Icon :icon="item.type === 'stay' ? 'lucide:hotel' : item.type === 'dining' ? 'lucide:utensils' : 'lucide:map-pin'" width="14" height="16" />
+                  </div>
+                  <div class="marker-line" v-if="idx < getDaySchedule(dayObj).length - 1"></div>
                 </div>
 
-                <!-- Track -->
-                <div class="sched-track">
-                  <div class="track-line" v-if="idx > 0"></div>
-                  <div class="track-dot">
-                    <Icon
-                      :icon="item.type === 'stay' ? 'mdi:bed-outline' : item.type === 'dining' ? 'mdi:silverware-fork-knife' : 'mdi:map-marker-outline'"
-                      width="12" height="12"
-                    />
-                  </div>
-                  <div class="track-line" v-if="idx < getDaySchedule(dayObj).length - 1"></div>
-                  
-                  <div v-if="item.distToNext && item.distToNext > 0.05" class="dist-bubble">
-                    {{ formatDistance(item.distToNext) }}
-                  </div>
-                </div>
-
-                <!-- Card -->
-                <div class="sched-card">
-                  <p class="scard-note" v-if="item.note">{{ item.note }}</p>
-                  <div 
-                    class="place-card" 
-                    :class="{ 'selected': selectedPlace === item.place.title }"
-                    @click="focusPlace(item.place)"
-                  >
-                    <!-- Image -->
-                    <div
-                      class="pc-img"
+                <!-- Card Column -->
+                <div class="item-content">
+                  <div class="place-preview nextgen-card">
+                    <div 
+                      class="preview-img" 
                       :style="hasRealImage(item.place.image_url) ? { backgroundImage: `url(${item.place.image_url})` } : {}"
                     >
-                      <div v-if="!hasRealImage(item.place.image_url)" class="pc-img-empty">
-                        <Icon icon="mdi:image-off-outline" width="26" height="26" style="color:#b0bec5" />
-                      </div>
-                      <span class="pc-rating" v-if="item.place.rating !== 'No Rating'">
-                        <Icon icon="mdi:star" width="10" height="10" style="color:#E5A517" />
+                      <div class="rating-badge" v-if="item.place.rating && item.place.rating !== 'No Rating'">
+                        <Icon icon="mdi:star" width="10" height="10" />
                         {{ item.place.rating }}
-                      </span>
-                    </div>
-                    <!-- Info -->
-                    <div class="pc-info">
-                      <span class="pc-cat">{{ item.place.category }}</span>
-                      <span class="pc-name">{{ item.place.title }}</span>
-                      <span class="pc-addr" v-if="isReadableAddress(item.place.address)">
-                        <Icon icon="mdi:map-marker-outline" width="10" height="10" />
-                        {{ item.place.address }}
-                      </span>
-                      <p class="pc-desc">{{ item.place.description }}</p>
-                      <div class="pc-tags">
-                        <span v-for="a in parseAmenities(item.place.amenities).slice(0,5)" :key="a" class="pc-tag">{{ a }}</span>
                       </div>
+                    </div>
+                    <div class="preview-info">
+                      <span class="item-category">{{ item.place.category }}</span>
+                      <h3 class="item-name">{{ item.place.title }}</h3>
+                      <p class="item-address" v-if="isReadableAddress(item.place.address)">
+                        {{ item.place.address }}
+                      </p>
+                      <p v-if="item.note" class="item-note">{{ item.note }}</p>
                     </div>
                   </div>
+                  
+                  <!-- Travel Distance Indicator -->
+                  <div v-if="item.distToNext && item.distToNext > 0.05" class="travel-indicator">
+                    <Icon icon="lucide:move-right" width="12" height="12" />
+                    <span>{{ formatDistance(item.distToNext) }} travel</span>
+                  </div>
                 </div>
-
               </div>
-            </TransitionGroup>
+            </div>
           </template>
+        </main>
+      </aside>
+
+      <!-- Map Pane -->
+      <section class="map-pane">
+        <div ref="mapContainer" class="map-instance"></div>
+        
+        <!-- Floating Overlay Control -->
+        <div class="map-controls">
+          <button class="control-btn" @click="toggleMap">
+            <Icon :icon="isMapFull ? 'lucide:minimize-2' : 'lucide:maximize-2'" width="18" height="18" />
+          </button>
         </div>
 
-        <!-- Map pane (sticky) -->
-        <div class="map-pane">
-          <!-- Info overlay -->
-          <div class="map-card" v-if="result.itinerary">
-            <div class="mc-row">
-              <span class="mc-day">Day {{ activeDay }}</span>
-              <span class="mc-stats" v-if="result.itinerary[activeDay-1]?.distance_km > 0">
-                <Icon icon="mdi:map-marker-distance" width="12" height="12" />
-                {{ result.itinerary[activeDay-1].distance_km }} km
-                <span v-if="result.itinerary[activeDay-1].travel_time_min > 0">
-                  &nbsp;&middot;&nbsp;
-                  <Icon icon="mdi:clock-outline" width="12" height="12" />
-                  {{ formatTravelTime(result.itinerary[activeDay-1].travel_time_min) }} drive
-                </span>
-              </span>
-            </div>
-            <div class="mc-legend">
-              <span class="leg"><span class="leg-dot" style="background:#102050"></span>Hotel</span>
-              <span class="leg"><span class="leg-dot" style="background:#e74c3c"></span>Activity</span>
-              <span class="leg"><span class="leg-dot" style="background:#c98e0e"></span>Dining</span>
-            </div>
-            <div v-if="routeLoading" class="mc-routing">
-              <Icon icon="mdi:loading" class="spin-sm" width="12" height="12" />
-              Loading route…
-            </div>
-          </div>
-          <div ref="mapContainer" class="map-el"></div>
+        <!-- Legend Card -->
+        <div class="map-legend nextgen-card">
+          <div class="legend-item"><span class="dot bg-primary"></span> Stay</div>
+          <div class="legend-item"><span class="dot bg-gold"></span> Dining</div>
+          <div class="legend-item"><span class="dot bg-accent"></span> Activity</div>
         </div>
+      </section>
 
-      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ── Root ─────────────────────────────────────────────────────────────────── */
-.rr {
+.result-container {
   width: 100%;
-  height: 100%;        /* fill .result-page */
-  min-height: 0;
-  background: var(--surface-color);
-  display: flex;
-  flex-direction: column;
+  height: 100%;
   overflow: hidden;
+  background: var(--bg-color);
+  position: relative;
 }
 
-/* ── State views (loading / error) ───────────────────────────────────────── */
-.state-view {
-  flex: 1;
+.overlay-view {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: hsla(var(--background) / 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.loading-overlay {
+  background: hsl(var(--midnight));
+  z-index: 1000;
+  flex-direction: column;
+}
+
+.loading-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  padding: 0 var(--spacing-container);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Matching Header Brand Styles */
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 38px;
+  width: auto;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 1rem;
+}
+
+.brand-name {
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: white;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.brand-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: hsla(0, 0%, 100%, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.loading-content {
   display: flex;
   flex-direction: column;
   align-items: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.lottie-container {
+  margin-bottom: 2rem;
+  background: white;
+  border: 1px solid var(--border-color);
+  width: 280px;
+  height: 320px;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  border-radius: 140px / 160px; /* Vertical Oval */
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+}
+
+.loading-text-wrapper {
   text-align: center;
-  padding: 3rem 2rem;
+  margin-bottom: 2rem;
+  height: 70px;
+}
+
+.loading-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: white;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.loading-subtitle {
+  font-size: 0.95rem;
+  color: hsla(0, 0%, 100%, 0.6);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.loading-progress-bar {
+  width: 200px;
+  height: 2px;
+  background: hsla(var(--gold) / 0.2);
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: hsl(var(--gold));
+  animation: progress-slide 1.5s infinite cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes progress-slide {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+/* Transitions */
+.fade-up-enter-active,
+.fade-up-leave-active {
+  transition: all 0.4s ease;
+}
+
+.fade-up-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.loading-box, .error-box {
+  max-width: 400px;
+  text-align: center;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg) } }
+.spin { animation: spin 1s linear infinite; }
+
+/* ── Dashboard Layout ────────────────────────────────────────── */
+.dashboard {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* ── Itinerary Pane ────────────────────────────────────────── */
+.itinerary-pane {
+  width: 460px;
+  background: white;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 0;
+  z-index: 10;
+  transition: width 0.4s ease, opacity 0.4s ease;
+}
+
+.map-expanded .itinerary-pane {
+  width: 0;
+  opacity: 0;
+  border-right: none;
+}
+
+.pane-header {
+  padding: 1rem 1.25rem;
+  background: white;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.itinerary-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: hsl(var(--primary));
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.state-view h2 { font-size: 1.4rem; font-weight: 800; color: var(--primary-color); }
-.state-view p  { color: var(--text-secondary); font-size: 0.9rem; max-width: 320px; }
-
-@keyframes spin { to { transform: rotate(360deg) } }
-.spin { animation: spin 1.1s linear infinite; margin-bottom: 0.75rem; }
-
-/* ── Trip layout ─────────────────────────────────────────────────────────── */
-.trip-layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;        /* CRITICAL: flex child must shrink */
-  overflow: hidden;
-}
-
-/* ── Top bar ─────────────────────────────────────────────────────────────── */
-.trip-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.7rem 1.75rem 0.55rem;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.trip-bar-left { display: flex; align-items: center; }
-.title-row { display: flex; align-items: center; gap: 0.8rem; }
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: rgba(229,165,23,.1);
-  color: var(--accent-color);
-  font-size: 0.7rem;
+.meta-item {
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.15rem 0.5rem;
-  border-radius: 9999px;
-  width: fit-content;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.trip-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--primary-color);
-  line-height: 1.1;
+.meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-color);
 }
 
-.trip-title em { font-style: normal; color: var(--accent-color); }
-
-/* ── Day tab bar ─────────────────────────────────────────────────────────── */
-.day-tabs-container {
-  padding: 0.5rem 1.75rem;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--surface-color);
+.btn-restart {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  background: var(--muted);
   display: flex;
-  justify-content: flex-start;
-}
-
-.day-tabs {
-  position: relative;
-  display: flex;
-  background: var(--bg-color);
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-}
-
-.day-pill-bg {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  height: calc(100% - 8px);
-  background: white;
-  border-radius: 9px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1;
-}
-
-.day-tab {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem 1.2rem;
-  min-width: 90px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.3s ease;
-  border-radius: 9px;
+  color: hsl(var(--primary));
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
 }
 
-.day-tab:hover .dt-label {
-  color: var(--primary-color);
+.btn-restart:hover {
+  background: hsl(var(--secondary));
+  color: hsl(var(--primary));
 }
 
-.day-tab.active .dt-label {
-  color: var(--primary-color);
+/* ── Day Nav ────────────────────────────────────────────────── */
+.day-nav {
+  padding: 0.5rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
-.dt-label {
-  font-size: 0.85rem;
-  font-weight: 800;
+.day-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.day-scroll::-webkit-scrollbar { height: 2px; }
+
+.day-chip {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: white;
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
 
-.dt-meta {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: var(--text-light);
+.day-chip.active {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: white;
 }
 
-/* ── Trip body: the two-panel area ───────────────────────────────────────── */
-.trip-body {
-  display: flex;
+/* ── Timeline ───────────────────────────────────────────────── */
+.timeline-container {
   flex: 1;
-  min-height: 0;   /* CRITICAL — without this, flex children ignore overflow */
-  overflow: hidden;
+  overflow-y: auto;
+  padding: 1.5rem;
+  background: white;
+  scroll-behavior: smooth;
 }
 
-/* ── Schedule pane (left) — scrolls within itself ────────────────────────── */
-.schedule-pane {
-  flex: 0 0 46%;
-  min-height: 0;
-  overflow-y: auto;      /* only this panel scrolls */
-  overflow-x: hidden;
-  padding: 1.5rem 1.5rem 3rem;
-  background: var(--bg-color);
-  border-right: 1px solid var(--border-color);
+.day-summary-card {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: hsl(var(--midnight));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  color: white;
 }
 
-.schedule-pane::-webkit-scrollbar { width: 5px; }
-.schedule-pane::-webkit-scrollbar-track { background: transparent; }
-.schedule-pane::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-
-.schedule { display: flex; flex-direction: column; }
-
-/* ── Schedule row ────────────────────────────────────────────────────────── */
-.sched-row {
-  display: grid;
-  grid-template-columns: 64px 24px 1fr;
-  column-gap: 16px;
-  align-items: stretch;
-  position: relative;
+.day-summary-card .iconify {
+  color: hsl(var(--gold));
+  flex-shrink: 0;
 }
 
-/* Stagger Animation */
-.stagger-enter-active {
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  transition-delay: calc(var(--index) * 0.08s);
-}
-.stagger-enter-from {
-  opacity: 0;
-  transform: translateY(24px) scale(0.98);
-}
-
-/* Time column */
-.sched-time {
+.summary-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  padding-top: 12px;
-  gap: 0;
+  gap: 0.125rem;
 }
 
-.st-start {
+.summary-label {
   font-size: 0.65rem;
   font-weight: 700;
-  color: var(--primary-color);
-  white-space: nowrap;
-  line-height: 1.2;
-}
-
-.st-end {
-  font-size: 0.58rem;
-  font-weight: 500;
-  color: var(--text-light);
-  white-space: nowrap;
-  line-height: 1.2;
-}
-
-/* Track column */
-.sched-track {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.track-line {
-  flex: 1;
-  width: 4px;
-  min-height: 20px;
-  background: var(--border-color);
-  opacity: 0.5;
-  border-radius: 2px;
-}
-
-.dist-bubble {
-  position: absolute;
-  bottom: -11px; /* Center it exactly in the gap between dots */
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  border: 1.5px solid var(--border-color);
-  border-radius: 999px;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--text-light);
-  white-space: nowrap;
-  z-index: 10;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-}
-
-/* ... (track-dot same) */
-
-.track-dot {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 3px solid white;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  color: white;
-  z-index: 1;
-  transition: all 0.3s ease;
-}
-
-.t-stay .track-dot     { background: var(--primary-color); }
-.t-activity .track-dot { background: var(--accent-color); color: var(--primary-color); }
-.t-dining .track-dot   { background: #c98e0e; }
-
-.sched-row.selected .track-dot {
-  transform: scale(1.2);
-  box-shadow: 0 0 15px var(--accent-color);
-  border-color: var(--accent-color);
-}
-
-/* Card column */
-.sched-card { padding: 8px 0 20px; }
-
-.scard-note {
-  font-size: 0.65rem;
-  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--text-light);
-  margin: 0 0 8px 4px;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
 }
 
-/* ── Place card ──────────────────────────────────────────────────────────── */
-.place-card {
+.summary-value {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.summary-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.timeline-item {
   display: flex;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-}
-
-.place-card:hover {
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-  transform: translateY(-2px);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-.place-card.selected {
-  border-color: var(--accent-color);
-  box-shadow: 0 10px 30px rgba(229, 165, 23, 0.12);
-  background: rgba(229, 165, 23, 0.02);
-  transform: scale(1.01);
-}
-
-.pc-img {
-  width: 130px;
-  flex-shrink: 0;
-  background-size: cover;
-  background-position: center;
-  background-color: #f1f5f9;
-  position: relative;
-  border-right: 1px solid rgba(0, 0, 0, 0.04);
+  gap: 1.5rem;
+  cursor: pointer;
   min-height: 120px;
 }
 
-.pc-img-empty {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #102050 0%, #1e293b 100%);
-  opacity: 0.9;
-}
-
-.pc-img-empty .iconify {
-  color: var(--accent-color) !important;
-  opacity: 0.5;
-}
-
-.pc-rating {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  bottom: auto;
-  left: auto;
-  background: white;
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: var(--primary-color);
-  padding: 0.2rem 0.5rem;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.pc-info {
-  padding: 1rem 1.25rem;
-  flex: 1;
+.item-marker {
+  width: 60px;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  min-width: 0;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.pc-cat {
-  font-size: 0.62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--accent-hover);
-}
-
-.pc-name {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--primary-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.item-time {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: hsl(var(--primary));
+  text-align: right;
+  width: 100%;
+  margin-top: 10px; /* Align with top of the card/dot */
   line-height: 1.2;
 }
 
-.pc-addr {
+.marker-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  background: white;
+  border: 2px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  color: var(--text-light);
+  justify-content: center;
+  margin-top: 4px; /* Align with time label */
+  color: hsl(var(--primary));
+  z-index: 2;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.marker-line {
+  flex: 1;
+  width: 2px;
+  background: var(--border-color);
+  margin: 8px 0;
+}
+
+.type-stay .marker-dot { border-color: hsl(var(--primary)); color: white; background: hsl(var(--primary)); }
+.type-dining .marker-dot { border-color: hsl(var(--gold)); color: white; background: hsl(var(--gold)); }
+.type-activity .marker-dot { border-color: hsl(var(--gold)); color: hsl(var(--primary)); background: hsl(var(--gold)); }
+
+.timeline-item.is-selected .marker-dot {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px hsla(var(--gold) / 0.3);
+}
+
+.item-content {
+  flex: 1;
+  padding-bottom: 2rem;
+  min-width: 0;
+}
+
+.place-preview {
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+  background: white;
+  border: 1px solid var(--border-color);
+}
+
+.preview-img {
+  width: 100px;
+  background-size: cover;
+  background-position: center;
+  background-color: hsl(var(--midnight));
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-img::before {
+  content: 'NO IMAGE';
+  font-size: 0.6rem;
+  font-weight: 900;
+  color: hsla(var(--gold) / 0.5);
+  display: block;
+}
+
+.preview-img[style*="background-image"]::before {
+  display: none;
+}
+
+.rating-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: white;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-shadow: var(--shadow-sm);
+}
+
+.preview-info {
+  padding: 0.875rem 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-category {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: hsl(var(--gold));
+  letter-spacing: 0.05em;
+}
+
+.item-name {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: hsl(var(--primary));
+  margin: 0.125rem 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 2px;
 }
 
-.pc-desc {
-  font-size: 0.8rem;
+.item-address {
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
-  flex: 1;
+  text-overflow: ellipsis;
 }
 
-.pc-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.pc-tag {
-  font-size: 0.65rem;
+.item-note {
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--primary-color);
-  background: rgba(16, 32, 80, 0.04);
-  border-radius: 6px;
-  padding: 0.2rem 0.6rem;
-}
-
-/* ── Map pane (right) — fills remaining space, never scrolls ─────────────── */
-.map-pane {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-  background: #e8ecf0;
-  overflow: hidden;
-}
-
-.map-el { position: absolute; inset: 0; }
-
-/* Map info card */
-.map-card {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 1000;
-  background: rgba(255,255,255,.96);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 0.65rem 0.9rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,.1);
-  min-width: 156px;
-}
-
-.mc-row {
+  color: hsl(var(--primary));
+  margin-top: 0.5rem;
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.45rem;
-}
-
-.mc-day {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--primary-color);
-}
-
-.mc-stats {
-  display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.73rem;
-  font-weight: 600;
-  color: var(--text-secondary);
 }
 
-.mc-legend {
-  display: flex;
-  gap: 0.65rem;
-  border-top: 1px solid var(--border-color);
-  padding-top: 0.4rem;
+.item-note::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: hsl(var(--gold));
 }
 
-.leg {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-.mc-routing {
+.travel-indicator {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  color: var(--text-secondary);
-  border-top: 1px solid var(--border-color);
-  padding-top: 0.4rem;
-  margin-top: 0.3rem;
-}
-
-@keyframes spin-sm { to { transform: rotate(360deg) } }
-.spin-sm { animation: spin-sm 1s linear infinite; }
-
-/* ── Map Animated Path ───────────────────────────────────────────────────── */
-:deep(.animated-path) {
-  stroke-dasharray: 10, 10;
-  animation: dash-move 1.5s linear infinite;
-}
-
-@keyframes dash-move {
-  to {
-    stroke-dashoffset: -20;
-  }
-}
-
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
-.btn-primary {
-  background: var(--accent-color);
-  color: var(--primary-color);
-  padding: 0.55rem 1.25rem;
-  font-size: 0.9rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.75rem;
   font-weight: 700;
-  border-radius: var(--radius-md);
-  margin-top: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: background .2s;
+  color: var(--text-secondary);
 }
-.btn-primary:hover { background: var(--accent-hover); }
 
-.btn-outline {
-  display: inline-flex;
+/* ── Map Pane ───────────────────────────────────────────────── */
+.map-pane {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.map-instance {
+  width: 100%;
+  height: 100%;
+}
+
+.map-controls {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  white-space: nowrap;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1.5px solid var(--border-color);
-  padding: 0.45rem 0.9rem;
+  justify-content: center;
+  color: hsl(var(--primary));
+  box-shadow: var(--shadow-lg);
+}
+
+.map-legend {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  padding: 1rem;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  font-size: 0.82rem;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all .15s;
-  flex-shrink: 0;
+  color: hsl(var(--primary));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
-.btn-outline:hover { background: var(--bg-color); border-color: var(--text-secondary); color: var(--text-primary); }
 
-:deep(.leaflet-popup-content-wrapper) {
-  padding: 0; border-radius: 10px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.14);
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
 }
-:deep(.leaflet-popup-content) { margin: 0; line-height: 1.4; }
-:deep(.leaflet-popup-tip-container) { padding: 0; }
 
-/* ── Responsive ───────────────────────────────────────────────────────────── */
+.bg-primary { background: hsl(var(--primary)); }
+.bg-gold { background: hsl(var(--gold)); }
+.bg-accent { background: #1ABC9C; }
+
+/* ── Custom Map Popup ────────────────────────────────────────── */
+:deep(.custom-map-popup .leaflet-popup-content-wrapper) {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+}
+
+:deep(.custom-map-popup .leaflet-popup-content) {
+  margin: 0;
+  padding: 8px 12px;
+}
+
+:deep(.custom-map-popup .leaflet-popup-tip) {
+  background: white;
+  border: 1px solid var(--border-color);
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .trip-body { flex-direction: column; }
-  .schedule-pane {
-    flex: 0 0 55%;   /* takes 55% of the column height on tablet */
-    overflow-y: auto;
+  .dashboard {
+    flex-direction: column;
+  }
+  .itinerary-pane {
+    width: 100%;
+    height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
-    padding: 1.25rem;
   }
-  .map-pane { flex: 1; min-height: 260px; }
 }
 
-@media (max-width: 600px) {
-  .trip-bar { padding: 0.9rem 1rem; }
-  .day-tabs { padding: 0 1rem; }
-  .pc-img { width: 90px; }
-  .sched-row { grid-template-columns: 62px 22px 1fr; }
-  .trip-title { font-size: 1.2rem; }
+@media (max-width: 640px) {
+  .pane-header { padding: 1rem; }
+  .itinerary-title { font-size: 1.25rem; }
+  .timeline-container { padding: 1rem; }
 }
 </style>

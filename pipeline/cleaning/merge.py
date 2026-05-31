@@ -32,6 +32,11 @@ def main():
                 df[col] = df[col].replace("Not Available", pd.NA)
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
+    # Normalize title and province before merge so spacing/case differences don't create duplicates
+    for df in (api_df, scrape_df):
+        df["title"] = df["title"].astype(str).str.strip()
+        df["province"] = df["province"].astype(str).str.strip().str.title()
+
     # Outer join on title + province to keep all records from both sources
     merged = pd.merge(api_df, scrape_df, on=["title", "province"], how="outer", suffixes=("", "_scrape"))
 

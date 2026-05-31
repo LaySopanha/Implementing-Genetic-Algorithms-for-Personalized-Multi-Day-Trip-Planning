@@ -9,7 +9,8 @@
     "@iconify/vue": "^5.0.0",
     "axios": "^1.13.5",
     "leaflet": "^1.9.4",
-    "lucide-vue-next": "^0.575.0"
+    "lucide-vue-next": "^0.575.0",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.4",

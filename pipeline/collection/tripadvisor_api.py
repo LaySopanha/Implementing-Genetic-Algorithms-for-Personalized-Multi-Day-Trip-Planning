@@ -4,6 +4,7 @@ Input:  data/raw/here_places.csv
 Output: data/raw/tripadvisor_enriched.csv
 """
 
+import ast
 import logging
 import os
 import time
@@ -91,7 +92,7 @@ def main():
         raise EnvironmentError("TRIPADVISOR_API_KEYS not set in .env")
 
     places_df = pd.read_csv(INPUT_FILE)
-    places_df["position"] = places_df["position"].apply(eval)
+    places_df["position"] = places_df["position"].apply(ast.literal_eval)
     places_df["latitude"] = places_df["position"].apply(lambda x: x.get("lat") if isinstance(x, dict) else None)
     places_df["longitude"] = places_df["position"].apply(lambda x: x.get("lng") if isinstance(x, dict) else None)
 

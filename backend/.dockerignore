@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.bak
+output.json
+stats.json
+test_output.py
+.env
+.venv/
+venv/

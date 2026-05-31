@@ -23,9 +23,13 @@ def main():
     df = pd.read_csv(INPUT_FILE)
     logger.info("Loaded %d rows", len(df))
 
-    # Drop duplicate places (same title keeps first occurrence)
+    # Normalize title and province before dedup so spacing/case differences don't slip through
+    df["title"] = df["title"].astype(str).str.strip()
+    df["province"] = df["province"].astype(str).str.strip().str.title()
+
+    # Drop duplicate places (same title + province keeps first occurrence)
     before = len(df)
-    df.drop_duplicates(subset=["title"], keep="first", inplace=True)
+    df.drop_duplicates(subset=["title", "province"], keep="first", inplace=True)
     logger.info("Removed %d duplicates", before - len(df))
 
     # Normalize coordinates

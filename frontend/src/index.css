@@ -1,36 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Kantumruy+Pro:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Kantumruy+Pro:wght@300;400;600;700&display=swap');
 
 :root {
-  /* NextGen Brand Guidelines */
-  --primary-color: #102050;     /* Royal Blue */
-  --primary-hover: #0a1840;     /* Darker Royal Blue */
-  --secondary-color: #1ABC9C;   /* Turquoise (non-interactive use) */
-  --secondary-hover: #149c81;
-  --accent-color: #E5A517;      /* Premium Gold */
-  --accent-hover: #c98e0e;      /* Darker Gold */
-  --midnight: #0F1629;          /* Midnight — footer & dark surfaces */
+  /* NextGen Brand Guidelines (HSL) */
+  --primary: 220 67% 19%;           /* Royal Blue */
+  --primary-foreground: 0 0% 98%;
+  --gold: 43 82% 49%;               /* Premium Gold */
+  --gold-foreground: 220 67% 19%;
+  --midnight: 224 47% 11%;          /* Midnight text/bg */
+  --background: 0 0% 98%;           /* Light Background */
+  --foreground: 224 47% 11%;        /* Standard text color */
+  --secondary: 214 32% 91%;         /* Subtle backgrounds */
+  --muted: 220 14% 96%;             /* Disabled/secondary containers */
+  --border: 214 32% 91%;            /* Subtle borders */
+  
+  --radius: 0.125rem;               /* Sharp, premium corners */
 
-  --bg-color: #FAFAFA;          /* Clean White */
-  --surface-color: #ffffff;
-
-  --text-primary: #1e293b;
-  --text-secondary: #5C6580;    /* Muted Slate */
-  --text-light: #94a3b8;
-  --text-inverse: #ffffff;
-
-  --border-color: #E2E8F0;      /* Border Grey */
-  --border-active: var(--accent-color);
+  /* Derived colors for easier use */
+  --primary-color: hsl(var(--primary));
+  --accent-color: hsl(var(--gold));
+  --bg-color: hsl(var(--background));
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(215.4 16.3% 46.9%);
+  --border-color: hsl(var(--border));
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
-  --radius-md: 0.5rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-
-  --spacing-container: clamp(1.5rem, 6vw, 6rem);
+  --spacing-container: clamp(1rem, 5vw, 6rem);
 }
 
 * {
@@ -43,7 +40,7 @@ html,
 body {
   width: 100%;
   overflow-x: hidden;
-  /* Prevent horizontal scrolling */
+  height: 100%;
 }
 
 body {
@@ -54,16 +51,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;
   border: none;
   background: none;
   outline: none;
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
 }
 
 button:focus-visible {
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid hsl(var(--gold));
   outline-offset: 2px;
 }
 
@@ -74,18 +79,24 @@ button:focus-visible {
 a {
   text-decoration: none;
   color: inherit;
+  transition: all 0.2s ease;
 }
 
 ul {
   list-style: none;
 }
 
-/* Utilities */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+/* Premium Gradients */
+.bg-royal-gradient {
+  background: linear-gradient(135deg, hsl(220 67% 19%), hsl(224 47% 11%));
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, hsl(43 82% 49%), hsl(43 82% 60%));
+}
+
+.text-gold {
+  color: hsl(var(--gold));
 }
 
 #app {
@@ -97,9 +108,28 @@ ul {
   min-height: 100vh;
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Card pattern */
+.nextgen-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease;
+}
+
+.nextgen-card:hover {
+  border-color: hsla(var(--gold) / 0.4);
+}
+
+/* Input pattern */
+.nextgen-input {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.nextgen-input:focus {
+  border-color: hsl(var(--gold));
 }

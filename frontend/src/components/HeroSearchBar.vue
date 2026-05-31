@@ -188,71 +188,72 @@ const pacingOptions = [
 <style scoped>
 .search-bar-wrapper {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
   position: relative;
   z-index: 30;
-  margin-top: -2rem;
+  margin-top: -2.5rem;
 }
 
 .search-tabs {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   margin-bottom: 0;
-  padding-left: 1rem;
 }
 
 .tab-btn {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(16, 32, 80, 0.4);
   backdrop-filter: blur(8px);
   border: none;
   color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px 12px 0 0;
+  padding: 0.875rem 2rem;
+  border-radius: var(--radius) var(--radius) 0 0;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .tab-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(16, 32, 80, 0.6);
 }
 
 .tab-btn.active {
   background: white;
-  color: var(--primary-color);
+  color: hsl(var(--primary));
 }
 
 .search-container {
   background: white;
-  border-radius: 16px;
+  border-radius: var(--radius);
   border-top-left-radius: 0;
   display: flex;
   align-items: stretch;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  padding: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  padding: 0.5rem;
   border: 1px solid var(--border-color);
 }
 
 .search-field {
   flex: 1;
-  padding: 0.5rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: background 0.2s;
   user-select: none;
 }
 
 .search-field:hover,
 .search-field.field-open {
-  background: var(--bg-color);
+  background: var(--muted);
 }
 
 .field-content {
@@ -261,12 +262,12 @@ const pacingOptions = [
 }
 
 .field-content label {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: var(--text-secondary);
-  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: hsl(var(--gold));
+  margin-bottom: 0.25rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .input-display {
@@ -276,29 +277,31 @@ const pacingOptions = [
 }
 
 .field-icon {
-  color: var(--text-secondary);
-  margin-right: 0.5rem;
+  color: hsl(var(--primary));
+  margin-right: 0.75rem;
   flex-shrink: 0;
+  opacity: 0.8;
 }
 
 .value-text {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  color: hsl(var(--primary));
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .value-text.placeholder {
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .dropdown-icon {
-  color: var(--text-light);
-  margin-left: 0.5rem;
+  color: var(--text-secondary);
+  margin-left: 0.75rem;
   flex-shrink: 0;
   transition: transform 0.2s;
 }
@@ -310,93 +313,79 @@ const pacingOptions = [
 /* Custom Dropdown */
 .dropdown-list {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 4px);
   left: 0;
   min-width: 100%;
   background: white;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
   z-index: 100;
-  max-height: 240px;
+  max-height: 280px;
   overflow-y: auto;
-  padding: 0.5rem;
-}
-
-.dropdown-list::-webkit-scrollbar {
-  width: 4px;
-}
-.dropdown-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-.dropdown-list::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
+  padding: 0.25rem;
 }
 
 .dropdown-item {
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: hsl(var(--primary));
   cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
+  transition: all 0.2s;
 }
 
 .dropdown-item:hover {
-  background: var(--bg-color);
-  color: var(--primary-color);
+  background: var(--secondary);
 }
 
 .dropdown-item.selected {
-  background: rgba(229, 165, 23, 0.1);
-  color: var(--primary-color);
-  font-weight: 700;
+  background: hsl(var(--primary));
+  color: white;
 }
 
 .field-error {
-  background: rgba(229, 62, 62, 0.05);
-  border-radius: 8px;
+  border: 1px solid hsla(0, 100%, 50%, 0.2);
+  background: hsla(0, 100%, 50%, 0.02);
 }
 
 .error-text {
-  color: #e53e3e !important;
-  font-weight: 600 !important;
+  color: #ef4444 !important;
 }
 
 .divider {
   width: 1px;
   background: var(--border-color);
-  margin: 0.75rem 0;
+  margin: 1rem 0;
 }
 
 .search-action {
-  padding-left: 0.75rem;
+  padding-left: 0.5rem;
   display: flex;
   align-items: stretch;
 }
 
 .btn-search {
-  background: var(--accent-color);
-  color: var(--primary-color);
+  background: linear-gradient(135deg, hsl(43 82% 49%), hsl(43 82% 60%));
+  color: hsl(var(--primary));
   border: none;
-  border-radius: 12px;
-  padding: 0 2.5rem;
-  font-size: 1.1rem;
+  border-radius: var(--radius);
+  padding: 0 3rem;
+  font-size: 1rem;
   font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .btn-search:hover {
-  background: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(229, 165, 23, 0.4);
+  box-shadow: 0 4px 12px hsla(43, 82%, 49%, 0.3);
 }
 
 .mr-2 { margin-right: 0.5rem; }
@@ -409,10 +398,10 @@ const pacingOptions = [
   .divider {
     width: 100%;
     height: 1px;
-    margin: 0.75rem 0;
+    margin: 0.5rem 0;
   }
   .search-field {
-    padding: 0.75rem 0.5rem;
+    padding: 1rem;
   }
   .search-action {
     padding-left: 0;
@@ -420,25 +409,7 @@ const pacingOptions = [
   }
   .btn-search {
     width: 100%;
-    padding: 1rem;
-  }
-  .tab-btn {
-    padding: 0.75rem 1rem;
-    font-size: 0.85rem;
-  }
-  .hidden-mobile {
-    display: none;
-  }
-  .dropdown-list {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    min-width: unset;
-    width: 100%;
-    border-radius: 16px 16px 0 0;
-    max-height: 60vh;
+    padding: 1.25rem;
   }
 }
 </style>
