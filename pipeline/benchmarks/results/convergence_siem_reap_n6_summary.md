@@ -1,28 +1,30 @@
 # Benchmark Summary: Siem Reap n=6
 
-- Generated: 2026-05-08T16:07:54
-- Trials: 5
+- Generated: 2026-05-31T19:37:18
+- Trials: 30
 
 ## Algorithm Metrics
 
 | Algorithm | Mean km | Std km | Mean time (ms) |
 |---|---:|---:|---:|
-| Random | 24.98 | 0.76 | 0.16 |
-| Greedy NN | 18.72 | 2.61 | 0.22 |
-| 2-opt | 18.54 | 2.38 | 0.85 |
-| GA (basic) | 16.60 | 0.00 | 137.57 |
-| GA (memetic) | 16.60 | 0.00 | 375.54 |
+| Random | 25.88 | 2.04 | 0.05 |
+| Greedy NN | 20.18 | 2.84 | 0.08 |
+| 2-opt | 19.23 | 2.43 | 0.26 |
+| GA (basic) | 16.60 | 0.00 | 55.99 |
+| GA (memetic) | 16.60 | 0.00 | 134.49 |
 
 ## Improvements
 
-- GA (basic) vs Random: 33.54%
-- GA (memetic) vs Random: 33.54%
-- GA (memetic) vs 2-opt: 10.48%
+- GA (basic) vs Random: 35.85%
+- GA (memetic) vs Random: 35.85%
+- GA (memetic) vs 2-opt: 13.68%
 - GA (memetic) vs GA (basic): 0.00%
 
 ## Statistical Tests
 
-- Wilcoxon tests not available in this environment.
+- `memetic_vs_basic`: p=1.000000, winner=GA (basic)
+- `memetic_vs_2opt`: p=0.000283, winner=GA (memetic)
+- `basic_vs_2opt`: p=0.000283, winner=GA (basic)
 
 ## Analysis Notes
 
@@ -31,4 +33,4 @@
 
 ## Report-Ready Claims
 
-- No statistically backed claim generated automatically.
+- For Siem Reap benchmark cases with n=6 places over 30 trials, the memetic GA achieved 13.68% shorter routes than deterministic 2-opt (Wilcoxon p=0.000283).

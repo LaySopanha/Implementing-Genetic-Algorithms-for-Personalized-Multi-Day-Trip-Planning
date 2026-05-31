@@ -20,7 +20,7 @@ from sklearn.metrics import roc_auc_score
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-DATA_FILE = Path(__file__).parent.parent / "data" / "processed" / "cleaned_merged_data.csv"
+DATA_FILE = Path(__file__).parent.parent.parent / "backend" / "data" / "cleaned_merged_data.csv"
 WEIGHTS_FILE = Path(__file__).parent.parent.parent / "backend" / "model" / "weights.json"
 
 DEFAULT_WEIGHTS = {"rating_weight": 0.4, "review_weight": 0.6}
