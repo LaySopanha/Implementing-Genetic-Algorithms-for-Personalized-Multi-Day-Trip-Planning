@@ -1,6 +1,6 @@
 <script setup>
 import { Icon } from '@iconify/vue'
-import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -17,7 +17,7 @@ const props = defineProps({
   error: { type: String, default: '' }
 })
 
-const emit = defineEmits(['restart'])
+const emit = defineEmits(['restart', 'go-home'])
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -118,6 +118,13 @@ const getDayRoute = (dayObj) => {
     .map(item => item.place)
     .filter(p => p.lat && p.lng && isValidCoord(p.lat, p.lng))
 }
+
+// ── Display state ─────────────────────────────────────────────────────────────
+
+const showFullLoading = computed(() => props.loading && !props.result?.itinerary)
+const showError       = computed(() => !props.loading && !props.result?.itinerary)
+const showDashboard   = computed(() => !!props.result?.itinerary)
+const isRerolling     = computed(() => props.loading && !!props.result?.itinerary)
 
 // ── State ───────────────────────────────────────────────────────────────────
 
@@ -238,7 +245,7 @@ const plotDay = async (dayNum) => {
         ? makeMapIcon(SVG_FORK, 'hsl(var(--gold))')
         : makeNumIcon(++actNum, color)
     const marker = L.marker([p.lat, p.lng], { icon }).addTo(markersGroup)
-    
+
     // Add interactive popup
     const popupContent = `
       <div style="font-family: 'Inter', sans-serif; min-width: 180px; padding: 2px;">
@@ -274,11 +281,20 @@ const plotDay = async (dayNum) => {
     routeLoading.value = true
     const roadCoords = await fetchRoadRoute(routePlaces)
     routeLoading.value = false
+    // Background track — wide, faded, gives the "road" feel
+    L.polyline(roadCoords, {
+      color,
+      weight: 8,
+      opacity: 0.12,
+    }).addTo(markersGroup)
+
+    // Animated direction trail — flowing dashes show travel direction
     L.polyline(roadCoords, {
       color,
       weight: 3,
-      opacity: 0.6,
-      dashArray: '8, 8'
+      opacity: 0.9,
+      dashArray: '10 7',
+      className: 'route-trail'
     }).addTo(markersGroup)
   }
 }
@@ -296,7 +312,13 @@ const focusPlace = (place) => {
 }
 
 watch(() => props.result, async (val) => {
-  if (val?.itinerary) { await nextTick(); initMap(); await plotDay(activeDay.value) }
+  if (val?.itinerary) {
+    activeDay.value = 1
+    selectedPlace.value = null
+    await nextTick()
+    initMap()
+    await plotDay(1)
+  }
 }, { deep: true })
 
 watch(activeDay, (day) => { if (props.result?.itinerary) plotDay(day) })
@@ -320,7 +342,7 @@ onBeforeUnmount(() => {
   <div class="result-container" :class="{ 'map-expanded': isMapFull }">
 
     <!-- ── State views ───────────────────────────────────────── -->
-    <div v-if="loading" class="overlay-view loading-overlay">
+    <div v-if="showFullLoading" class="overlay-view loading-overlay">
       
 
       <div class="loading-content">
@@ -348,17 +370,20 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-else-if="!result?.itinerary" class="overlay-view">
+    <div v-else-if="showError" class="overlay-view">
       <div class="error-box nextgen-card">
         <Icon icon="mdi:alert-circle-outline" width="48" height="48" style="color:#ef4444" />
         <h2>Generation Failed</h2>
         <p>{{ error || "We couldn't create a valid itinerary with these preferences." }}</p>
-        <button class="btn-primary" @click="$emit('restart')">Modify Search</button>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center">
+          <button class="btn-primary" @click="$emit('restart')">Try Again</button>
+          <button class="btn-secondary" @click="$emit('go-home')">Edit Search</button>
+        </div>
       </div>
     </div>
 
     <!-- ── Dashboard Layout ──────────────────────────────────────── -->
-    <div v-else class="dashboard">
+    <div v-else-if="showDashboard" class="dashboard">
       
       <!-- Side Navigation / Itinerary Pane -->
       <aside class="itinerary-pane">
@@ -378,9 +403,14 @@ onBeforeUnmount(() => {
                 </template>
               </div>
             </div>
-            <button class="btn-restart" @click="$emit('restart')" title="Start Over">
-              <Icon icon="lucide:refresh-cw" width="14" height="14" />
-            </button>
+            <div class="header-actions">
+              <button class="btn-action" @click="$emit('restart')" title="New suggestions (same route)" :disabled="isRerolling">
+                <Icon icon="lucide:shuffle" width="14" height="14" :class="{ 'spin-icon': isRerolling }" />
+              </button>
+              <button class="btn-action" @click="$emit('go-home')" title="Edit search">
+                <Icon icon="lucide:sliders-horizontal" width="14" height="14" />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -401,11 +431,31 @@ onBeforeUnmount(() => {
 
         <!-- Timeline Content -->
         <main ref="timelineContainer" class="timeline-container">
-          <template v-for="dayObj in result.itinerary" :key="dayObj.day">
+
+          <!-- Skeleton while rerolling -->
+          <div v-if="isRerolling" class="skeleton-timeline">
+            <div v-for="i in 5" :key="i" class="skeleton-row">
+              <div class="skel-marker-col">
+                <div class="skel skel-time"></div>
+                <div class="skel skel-dot"></div>
+                <div class="skel skel-line"></div>
+              </div>
+              <div class="skel-card">
+                <div class="skel skel-img"></div>
+                <div class="skel-info">
+                  <div class="skel skel-tag"></div>
+                  <div class="skel skel-title"></div>
+                  <div class="skel skel-addr"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real content -->
+          <template v-else v-for="dayObj in result.itinerary" :key="dayObj.day">
             <div v-if="activeDay === dayObj.day" class="timeline">
-              
-              <div 
-                v-for="(item, idx) in getDaySchedule(dayObj)" 
+              <div
+                v-for="(item, idx) in getDaySchedule(dayObj)"
                 :key="item.place.title + idx"
                 class="timeline-item"
                 :class="['type-' + item.type, { 'is-selected': selectedPlace === item.place.title }]"
@@ -423,8 +473,8 @@ onBeforeUnmount(() => {
                 <!-- Card Column -->
                 <div class="item-content">
                   <div class="place-preview nextgen-card">
-                    <div 
-                      class="preview-img" 
+                    <div
+                      class="preview-img"
                       :style="hasRealImage(item.place.image_url) ? { backgroundImage: `url(${item.place.image_url})` } : {}"
                     >
                       <div class="rating-badge" v-if="item.place.rating && item.place.rating !== 'No Rating'">
@@ -441,7 +491,7 @@ onBeforeUnmount(() => {
                       <p v-if="item.note" class="item-note">{{ item.note }}</p>
                     </div>
                   </div>
-                  
+
                   <!-- Travel Distance Indicator -->
                   <div v-if="item.distToNext && item.distToNext > 0.05" class="travel-indicator">
                     <Icon icon="lucide:move-right" width="12" height="12" />
@@ -457,7 +507,13 @@ onBeforeUnmount(() => {
       <!-- Map Pane -->
       <section class="map-pane">
         <div ref="mapContainer" class="map-instance"></div>
-        
+
+        <!-- Route loading badge -->
+        <div v-if="routeLoading" class="route-loading-badge">
+          <Icon icon="lucide:route" width="12" height="12" />
+          Calculating route...
+        </div>
+
         <!-- Floating Overlay Control -->
         <div class="map-controls">
           <button class="control-btn" @click="toggleMap">
@@ -502,54 +558,6 @@ onBeforeUnmount(() => {
   background: hsl(var(--midnight));
   z-index: 1000;
   flex-direction: column;
-}
-
-.loading-nav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 72px;
-  padding: 0 var(--spacing-container);
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Matching Header Brand Styles */
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  text-decoration: none;
-}
-
-.logo-img {
-  height: 38px;
-  width: auto;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding-left: 1rem;
-}
-
-.brand-name {
-  font-size: 1.125rem;
-  font-weight: 900;
-  color: white;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-
-.brand-tag {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: hsla(0, 0%, 100%, 0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .loading-content {
@@ -637,7 +645,7 @@ onBeforeUnmount(() => {
   transform: translateY(-8px);
 }
 
-.loading-box, .error-box {
+.error-box {
   max-width: 400px;
   text-align: center;
   padding: 3rem;
@@ -647,8 +655,38 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
-@keyframes spin { to { transform: rotate(360deg) } }
-.spin { animation: spin 1s linear infinite; }
+.btn-primary {
+  background: hsl(var(--primary));
+  color: white;
+  padding: 0.75rem 2rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: hsl(var(--midnight));
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: white;
+  color: hsl(var(--primary));
+  padding: 0.75rem 2rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: hsl(var(--primary));
+  transform: translateY(-1px);
+}
 
 /* ── Dashboard Layout ────────────────────────────────────────── */
 .dashboard {
@@ -668,6 +706,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   flex-shrink: 0;
   min-height: 0;
+  overflow: hidden;
   z-index: 10;
   transition: width 0.4s ease, opacity 0.4s ease;
 }
@@ -726,7 +765,12 @@ onBeforeUnmount(() => {
   background: var(--border-color);
 }
 
-.btn-restart {
+.header-actions {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.btn-action {
   width: 32px;
   height: 32px;
   border-radius: var(--radius);
@@ -736,12 +780,13 @@ onBeforeUnmount(() => {
   justify-content: center;
   color: hsl(var(--primary));
   border: 1px solid var(--border-color);
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-restart:hover {
+.btn-action:hover {
   background: hsl(var(--secondary));
-  color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
 }
 
 /* ── Day Nav ────────────────────────────────────────────────── */
@@ -772,6 +817,14 @@ onBeforeUnmount(() => {
   background: white;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.day-chip:hover:not(.active) {
+  background: var(--muted);
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
 }
 
 .day-chip.active {
@@ -787,48 +840,6 @@ onBeforeUnmount(() => {
   padding: 1.5rem;
   background: white;
   scroll-behavior: smooth;
-}
-
-.day-summary-card {
-  margin-bottom: 2rem;
-  padding: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  background: hsl(var(--midnight));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius);
-  color: white;
-}
-
-.day-summary-card .iconify {
-  color: hsl(var(--gold));
-  flex-shrink: 0;
-}
-
-.summary-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.summary-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.6;
-}
-
-.summary-value {
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.summary-divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .timeline-item {
@@ -914,15 +925,15 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-.preview-img::before {
-  content: 'NO IMAGE';
-  font-size: 0.6rem;
-  font-weight: 900;
-  color: hsla(var(--gold) / 0.5);
-  display: block;
+.preview-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E5A517' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E") center/28px no-repeat;
+  opacity: 0.25;
 }
 
-.preview-img[style*="background-image"]::before {
+.preview-img[style*="background-image"]::after {
   display: none;
 }
 
@@ -1013,6 +1024,26 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
+.route-loading-badge {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: hsl(var(--primary));
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 .map-controls {
   position: absolute;
   top: 1.5rem;
@@ -1034,6 +1065,12 @@ onBeforeUnmount(() => {
   justify-content: center;
   color: hsl(var(--primary));
   box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.control-btn:hover {
+  background: var(--muted);
 }
 
 .map-legend {
@@ -1068,6 +1105,15 @@ onBeforeUnmount(() => {
 .bg-primary { background: hsl(var(--primary)); }
 .bg-gold { background: hsl(var(--gold)); }
 .bg-accent { background: #1ABC9C; }
+
+/* ── Route trail animation ───────────────────────────────────── */
+@keyframes route-flow {
+  to { stroke-dashoffset: -17; }
+}
+
+:deep(.route-trail) {
+  animation: route-flow 0.6s linear infinite;
+}
 
 /* ── Custom Map Popup ────────────────────────────────────────── */
 :deep(.custom-map-popup .leaflet-popup-content-wrapper) {
@@ -1105,5 +1151,80 @@ onBeforeUnmount(() => {
   .pane-header { padding: 1rem; }
   .itinerary-title { font-size: 1.25rem; }
   .timeline-container { padding: 1rem; }
+}
+
+/* ── Skeleton loading ──────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skel {
+  background: linear-gradient(90deg, #f0f2f5 25%, #e4e6ea 50%, #f0f2f5 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius);
+}
+
+.skeleton-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 1.5rem;
+  min-height: 120px;
+}
+
+.skel-marker-col {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 10px;
+}
+
+.skel-time  { width: 48px; height: 14px; margin-bottom: 6px; }
+.skel-dot   { width: 32px; height: 32px; border-radius: var(--radius); flex-shrink: 0; }
+.skel-line  { flex: 1; width: 2px; margin: 8px 0; border-radius: 0; }
+
+.skel-card {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  margin-bottom: 2rem;
+}
+
+.skel-img   { width: 100px; flex-shrink: 0; }
+
+.skel-info {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skel-tag   { width: 60px;  height: 10px; }
+.skel-title { width: 75%;   height: 16px; }
+.skel-addr  { width: 55%;   height: 12px; }
+
+/* Shuffle button spin */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

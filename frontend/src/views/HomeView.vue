@@ -166,7 +166,7 @@ const goToItinerary = () => {
   background-position: center;
   background-attachment: fixed;
 }
-/* ... rest of styles remain similar, removing result-layout related ones ... */
+
 .hero-banner::before {
   content: "";
   position: absolute;
@@ -296,6 +296,9 @@ const goToItinerary = () => {
 
 @media (max-width: 768px) {
   .main-title { font-size: 2rem; }
-  .hero-banner { padding: 3rem 1rem 5rem 1rem; }
+  .hero-banner {
+    padding: 3rem 1rem 5rem 1rem;
+    background-attachment: scroll;
+  }
 }
 </style>

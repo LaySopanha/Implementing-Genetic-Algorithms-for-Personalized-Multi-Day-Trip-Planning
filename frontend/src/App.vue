@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, provide, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 
@@ -11,45 +11,43 @@ let lastScrollY = 0
 const isHome = computed(() => route.path === '/')
 const isResultMode = computed(() => route.path === '/itinerary')
 
-// Provide this to children if they still need it (like for manual overrides), 
-// but most should now rely on the route.
-provide('setResultMode', (val) => {
-  // Manual override if absolutely necessary, but preferred to use route
-})
+// Toggle to show/hide the How It Works navigation/footer links
+const showHowItWorks = false
 
-// CRITICAL: Reset hidden state whenever the route changes.
+// Reset hidden state whenever the route changes.
 watch(() => route.path, () => {
   isHidden.value = false
 })
 
 const handleScroll = () => {
-  const currentScrollY = window.pageYOffset || document.documentElement.scrollTop
-  
-  // Show/Hide logic: Hide when scrolling down, show when scrolling up
-  if (currentScrollY > lastScrollY && currentScrollY > 150) {
+  const currentScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+
+  // Hide header when scrolling down after a certain threshold
+  if (currentScrollY > lastScrollY && currentScrollY > 100) {
     isHidden.value = true
-  } else {
+  } else if (currentScrollY < lastScrollY) {
     isHidden.value = false
   }
-  
+
   isScrolled.value = currentScrollY > 20
-  lastScrollY = currentScrollY
+  lastScrollY = Math.max(0, currentScrollY)
 }
 
 const handleInternalScroll = (e) => {
   const currentScrollY = e.detail.scrollTop
-  
+
   if (currentScrollY > lastScrollY && currentScrollY > 100) {
     isHidden.value = true
-  } else {
+  } else if (currentScrollY < lastScrollY) {
     isHidden.value = false
   }
-  
+
   isScrolled.value = currentScrollY > 20
-  lastScrollY = currentScrollY
+  lastScrollY = Math.max(0, currentScrollY)
 }
 
 onMounted(() => {
+  lastScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('internal-scroll', handleInternalScroll, { passive: true })
 })
@@ -85,7 +83,7 @@ onUnmounted(() => {
         <nav class="header-nav">
           <router-link class="nav-link" to="/">Home</router-link>
           <router-link class="nav-link" to="/destinations">Destinations</router-link>
-          <router-link class="nav-link" to="/how-it-works">How It Works</router-link>
+          <router-link v-if="showHowItWorks" class="nav-link" to="/how-it-works">How It Works</router-link>
           <router-link class="nav-link" to="/about">About</router-link>
           <router-link
             v-if="!isResultMode"
@@ -139,7 +137,7 @@ onUnmounted(() => {
           <h4 class="footer-heading">Company</h4>
           <ul class="footer-links">
             <li><router-link to="/about">About Us</router-link></li>
-            <li><router-link to="/how-it-works">How It Works</router-link></li>
+            <li v-if="showHowItWorks"><router-link to="/how-it-works">How It Works</router-link></li>
             <li><a href="#">Privacy Policy</a></li>
             <li><a href="#">Terms of Use</a></li>
           </ul>
@@ -229,11 +227,10 @@ onUnmounted(() => {
   background-color: hsl(var(--midnight) / 0.98);
   backdrop-filter: blur(15px);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-  height: 64px;
 }
 
 .header-hidden {
-  transform: translateY(-100%);
+  transform: translateY(-100%) !important;
 }
 
 .header-inner {
@@ -261,7 +258,7 @@ onUnmounted(() => {
 }
 
 .header-scrolled .logo-img {
-  height: 32px;
+  height: 38px;
 }
 
 .brand-text {

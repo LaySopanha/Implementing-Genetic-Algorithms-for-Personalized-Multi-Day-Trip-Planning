@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { MapPin, Calendar, Navigation, Search, Map, ChevronDown } from 'lucide-vue-next'
 import axios from 'axios'
 
@@ -16,8 +16,57 @@ const provinces = ref([])
 const loadingProvinces = ref(false)
 const destinationError = ref('')
 const openField = ref(null)
+const dropUp = ref(false)
+const provinceQuery = ref('')
+const provinceInput = ref(null)
 
 const localForm = ref({ ...props.modelValue })
+const filteredProvinces = computed(() => {
+  const q = provinceQuery.value.toLowerCase().trim()
+  if (!q) return provinces.value
+
+  // 1. Priority: Substring matches
+  const substringMatches = provinces.value.filter(p => p.toLowerCase().includes(q))
+  if (substringMatches.length > 0) {
+    // If we have an exact match or very strong substring match, just show those
+    return substringMatches
+  }
+
+  // 2. Fallback: Fuzzy matching for typos (Levenshtein distance)
+  return provinces.value.filter(p => {
+    const name = p.toLowerCase()
+    return levenshtein(q, name) <= 2 // Allow up to 2 edits for longer strings
+  })
+})
+
+// Simple Levenshtein distance for typo detection
+const levenshtein = (a, b) => {
+  const matrix = []
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i]
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1]
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        )
+      }
+    }
+  }
+  return matrix[b.length][a.length]
+}
+
+const highlightMatch = (text, query) => {
+  if (!query) return text
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escapedQuery})`, 'gi')
+  return text.replace(regex, '<span class="match-highlight">$1</span>')
+}
 
 onMounted(async () => {
   loadingProvinces.value = true
@@ -46,14 +95,37 @@ const updateForm = () => {
   emit('update:modelValue', localForm.value)
 }
 
-const toggleField = (name) => {
-  openField.value = openField.value === name ? null : name
+const toggleField = (name, event) => {
+  if (openField.value === name) {
+    openField.value = null
+    return
+  }
+
+  // Smart positioning: check if there's enough space below
+  if (event && event.currentTarget) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const dropdownHeight = 300 // max-height 280px + buffer
+    dropUp.value = spaceBelow < dropdownHeight
+  }
+
+  openField.value = name
+
+  if (name === 'province') {
+    provinceQuery.value = '' // Clear for fresh search inside dropdown
+    nextTick(() => {
+      provinceInput.value?.focus()
+    })
+  }
 }
 
 const selectOption = (field, value) => {
   localForm.value[field] = value
   openField.value = null
-  if (field === 'province') destinationError.value = ''
+  if (field === 'province') {
+    destinationError.value = ''
+    provinceQuery.value = value
+  }
   updateForm()
 }
 
@@ -80,15 +152,20 @@ const pacingOptions = [
   { value: 5, label: '5 Places/Day (Packed)' },
 ]
 </script>
-
 <template>
-  <div class="search-bar-wrapper">
-    <!-- Top Tab -->
-    <div class="search-tabs">
-      <button class="tab-btn active">
-        <Map :size="18" class="mr-2" /> Trip Planner
-      </button>
-    </div>
+  <div class="hero-search-root">
+    <!-- Backdrop overlay -->
+    <Transition name="fade">
+      <div v-if="openField" class="search-backdrop" @click="closeAll"></div>
+    </Transition>
+
+    <div class="search-bar-wrapper">
+      <!-- Top Tab -->
+      <div class="search-tabs">
+        <button class="tab-btn active">
+          <Map :size="18" class="mr-2" /> Trip Planner
+        </button>
+      </div>
 
     <!-- Main Search Container -->
     <div class="search-container">
@@ -97,7 +174,7 @@ const pacingOptions = [
       <div
         class="search-field destination-field"
         :class="{ 'field-error': destinationError, 'field-open': openField === 'province' }"
-        @click.stop="toggleField('province')"
+        @click.stop="toggleField('province', $event)"
       >
         <div class="field-content">
           <label>DESTINATION</label>
@@ -109,14 +186,28 @@ const pacingOptions = [
             <ChevronDown :size="14" class="dropdown-icon" :class="{ rotated: openField === 'province' }" />
           </div>
         </div>
-        <div v-if="openField === 'province'" class="dropdown-list" @click.stop>
+        <div v-if="openField === 'province'" class="dropdown-list" :class="{ 'is-drop-up': dropUp }" @click.stop>
+          <div class="dropdown-search-wrapper" @click.stop>
+            <Search :size="14" class="search-icon" />
+            <input
+              ref="provinceInput"
+              v-model="provinceQuery"
+              class="dropdown-search-input"
+              placeholder="Search province"
+              @keyup.enter="filteredProvinces.length > 0 && selectOption('province', filteredProvinces[0])"
+            />
+          </div>
           <div
-            v-for="prov in provinces"
+            v-for="prov in filteredProvinces"
             :key="prov"
             class="dropdown-item"
             :class="{ selected: localForm.province === prov }"
             @click="selectOption('province', prov)"
-          >{{ prov }}</div>
+            v-html="highlightMatch(prov, provinceQuery)"
+          ></div>
+          <div v-if="filteredProvinces.length === 0" class="no-results">
+            No matches found
+          </div>
         </div>
       </div>
 
@@ -126,7 +217,7 @@ const pacingOptions = [
       <div
         class="search-field"
         :class="{ 'field-open': openField === 'days' }"
-        @click.stop="toggleField('days')"
+        @click.stop="toggleField('days', $event)"
       >
         <div class="field-content">
           <label>DURATION</label>
@@ -136,7 +227,7 @@ const pacingOptions = [
             <ChevronDown :size="14" class="dropdown-icon" :class="{ rotated: openField === 'days' }" />
           </div>
         </div>
-        <div v-if="openField === 'days'" class="dropdown-list" @click.stop>
+        <div v-if="openField === 'days'" class="dropdown-list" :class="{ 'is-drop-up': dropUp }" @click.stop>
           <div
             v-for="n in durationOptions"
             :key="n"
@@ -153,7 +244,7 @@ const pacingOptions = [
       <div
         class="search-field"
         :class="{ 'field-open': openField === 'perDay' }"
-        @click.stop="toggleField('perDay')"
+        @click.stop="toggleField('perDay', $event)"
       >
         <div class="field-content">
           <label>PACING</label>
@@ -163,7 +254,7 @@ const pacingOptions = [
             <ChevronDown :size="14" class="dropdown-icon" :class="{ rotated: openField === 'perDay' }" />
           </div>
         </div>
-        <div v-if="openField === 'perDay'" class="dropdown-list" @click.stop>
+        <div v-if="openField === 'perDay'" class="dropdown-list" :class="{ 'is-drop-up': dropUp }" @click.stop>
           <div
             v-for="opt in pacingOptions"
             :key="opt.value"
@@ -183,16 +274,44 @@ const pacingOptions = [
 
     </div>
   </div>
+</div>
 </template>
-
 <style scoped>
+.hero-search-root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.search-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 990; /* High enough but below dropdown z-index 1001 if needed */
+  cursor: pointer;
+}
+
 .search-bar-wrapper {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
   position: relative;
-  z-index: 30;
+  z-index: 1001; /* Stay above backdrop and fixed header if any */
   margin-top: -2.5rem;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .search-tabs {
@@ -313,35 +432,103 @@ const pacingOptions = [
 /* Custom Dropdown */
 .dropdown-list {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 12px); /* Increased gap to clear container padding and border */
   left: 0;
-  min-width: 100%;
+  width: 100%;
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
   z-index: 100;
-  max-height: 280px;
+  max-height: 320px;
   overflow-y: auto;
   padding: 0.25rem;
 }
 
+.dropdown-list.is-drop-up {
+  top: auto;
+  bottom: calc(100% + 12px);
+}
+
+/* Ensure destination dropdown aligns with the very left of the container */
+.destination-field .dropdown-list {
+  left: -0.5rem;
+  width: calc(100% + 0.5rem);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: var(--radius);
+}
+
+.dropdown-search-wrapper {
+  position: sticky;
+  top: -0.25rem;
+  background: white;
+  z-index: 10;
+  padding: 0.75rem 1rem 0.75rem 1.5rem; /* Aligned with field padding */
+  margin: -0.25rem -0.25rem 0.25rem -0.25rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.search-icon {
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin-left: 0.15rem; /* Micro-adjustment to align with MapPin */
+}
+
+.dropdown-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: hsl(var(--primary));
+  background: transparent;
+  width: 100%;
+}
+
+.dropdown-search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
 .dropdown-item {
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.5rem;
   border-radius: var(--radius);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: hsl(var(--primary));
   cursor: pointer;
   transition: all 0.2s;
+  text-align: left; /* Explicitly left-aligned */
+  display: block;
+  width: 100%;
 }
 
 .dropdown-item:hover {
-  background: var(--secondary);
+  background: var(--muted); /* More visible hover state */
+  color: hsl(var(--gold));
 }
 
 .dropdown-item.selected {
   background: hsl(var(--primary));
+  color: white;
+}
+
+.no-results {
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Match highlighting */
+:deep(.match-highlight) {
+  color: hsl(var(--gold));
+  font-weight: 800;
+}
+
+.selected :deep(.match-highlight) {
   color: white;
 }
 
@@ -389,6 +576,10 @@ const pacingOptions = [
 }
 
 .mr-2 { margin-right: 0.5rem; }
+
+@media (max-width: 640px) {
+  .hidden-mobile { display: none; }
+}
 
 @media (max-width: 900px) {
   .search-container {

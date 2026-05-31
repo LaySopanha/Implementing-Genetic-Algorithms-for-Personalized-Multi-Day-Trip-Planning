@@ -223,6 +223,14 @@ const handleNext = () => {
   letter-spacing: 0.05em;
 }
 
+.scale-enter-active, .scale-leave-active {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.scale-enter-from, .scale-leave-to {
+  transform: scale(0);
+  opacity: 0;
+}
+
 .check-circle {
   position: absolute;
   top: 0.75rem;

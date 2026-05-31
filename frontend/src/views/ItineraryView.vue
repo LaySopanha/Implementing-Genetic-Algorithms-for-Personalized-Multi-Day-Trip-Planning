@@ -1,12 +1,11 @@
 <script setup>
-import { ref, onMounted, inject, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import ResultView from '../components/ResultView.vue'
 
 const route = useRoute()
 const router = useRouter()
-const setResultMode = inject('setResultMode')
 
 const loading = ref(true)
 const apiError = ref('')
@@ -42,21 +41,9 @@ const fetchItinerary = async (params) => {
   }
 }
 
-const handleRestart = () => {
-  router.push('/')
-}
-
-onMounted(() => {
-  if (setResultMode) setResultMode(true)
-  
-  // Extract params from query
+const buildParams = () => {
   const query = route.query
-  if (!query.province) {
-    router.push('/')
-    return
-  }
-
-  const params = {
+  return {
     province: query.province,
     days: parseInt(query.days) || 3,
     perDay: parseInt(query.perDay) || 3,
@@ -64,22 +51,35 @@ onMounted(() => {
     accommodation: query.accommodation ? (Array.isArray(query.accommodation) ? query.accommodation : [query.accommodation]) : [],
     dining: query.dining ? (Array.isArray(query.dining) ? query.dining : [query.dining]) : []
   }
+}
 
-  fetchItinerary(params)
+const handleRestart = () => {
+  fetchItinerary(buildParams())
+}
+
+const handleGoHome = () => {
+  router.push('/')
+}
+
+onMounted(() => {
+  if (!route.query.province) {
+    router.push('/')
+    return
+  }
+  fetchItinerary(buildParams())
 })
 
-onUnmounted(() => {
-  if (setResultMode) setResultMode(false)
-})
+
 </script>
 
 <template>
   <div class="itinerary-page">
-    <ResultView 
-      :loading="loading" 
-      :result="itineraryResult" 
-      :error="apiError" 
-      @restart="handleRestart" 
+    <ResultView
+      :loading="loading"
+      :result="itineraryResult"
+      :error="apiError"
+      @restart="handleRestart"
+      @go-home="handleGoHome"
     />
   </div>
 </template>
