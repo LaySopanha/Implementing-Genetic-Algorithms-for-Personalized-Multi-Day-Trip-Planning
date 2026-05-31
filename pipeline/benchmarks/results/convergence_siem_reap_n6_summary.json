@@ -1,0 +1,60 @@
+{
+  "generated_at": "2026-05-08T16:07:54",
+  "province": "Siem Reap",
+  "n_places": 6,
+  "trials": 5,
+  "algorithms": {
+    "Random": {
+      "mean_km": 24.9785,
+      "std_km": 0.7622,
+      "min_km": 23.8634,
+      "max_km": 25.9132,
+      "mean_time_ms": 0.1558,
+      "std_time_ms": 0.0588
+    },
+    "Greedy NN": {
+      "mean_km": 18.7235,
+      "std_km": 2.6086,
+      "min_km": 16.6001,
+      "max_km": 22.2289,
+      "mean_time_ms": 0.2169,
+      "std_time_ms": 0.1
+    },
+    "2-opt": {
+      "mean_km": 18.5427,
+      "std_km": 2.3806,
+      "min_km": 16.6001,
+      "max_km": 21.5885,
+      "mean_time_ms": 0.8523,
+      "std_time_ms": 0.713
+    },
+    "GA (basic)": {
+      "mean_km": 16.6001,
+      "std_km": 0.0,
+      "min_km": 16.6001,
+      "max_km": 16.6001,
+      "mean_time_ms": 137.5688,
+      "std_time_ms": 27.189
+    },
+    "GA (memetic)": {
+      "mean_km": 16.6001,
+      "std_km": 0.0,
+      "min_km": 16.6001,
+      "max_km": 16.6001,
+      "mean_time_ms": 375.5409,
+      "std_time_ms": 98.8843
+    }
+  },
+  "improvements_pct": {
+    "ga_basic_over_random": 33.5424,
+    "ga_memetic_over_random": 33.5424,
+    "ga_memetic_over_2opt": 10.4764,
+    "ga_memetic_over_ga_basic": 0.0
+  },
+  "wilcoxon": [],
+  "report_ready_claims": [],
+  "analysis_notes": [
+    "GA (memetic) showed near-zero variance across seeds; verify whether deterministic seeding or problem simplicity is dominating.",
+    "Memetic GA beat deterministic 2-opt on mean route length, suggesting the hybrid search adds value beyond local optimization alone."
+  ]
+}

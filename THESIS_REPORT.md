@@ -290,11 +290,9 @@ results/
 ✅ **Convergence tracking** (history per run for analysis)  
 
 ### In Progress / Next
-⏳ Benchmark comparison (GA basic vs memetic vs deterministic baselines)  
-❌ Description TF-IDF re-ranking (Week 3)  
-❌ Bayesian average rating (Week 3)  
+⏳ Benchmark comparison (GA basic vs memetic vs VRPTW vs deterministic baselines)  
 ❌ Cross-day global GA (Week 4)  
-❌ Time window constraints VRPTW (Week 4)  
+✅ **Time window constraints VRPTW (Week 4)** — Implemented!  
 ❌ NSGA-II multi-objective (Week 4)  
 ❌ Sentence embeddings (Week 6)  
 
@@ -304,12 +302,12 @@ results/
 
 | Issue | Impact | Fix Timeline |
 |-------|--------|--------------|
+| Geographic Anomalies | Fixed | Startup filter removes >70km outliers |
 | Category TF-IDF meaningless | Low (filtering works anyway) | Week 3 cleanup |
-| Weight tuning AUC proxy | Medium (arbitrary threshold) | Week 3 Bayesian average |
+| Weight tuning AUC proxy | Fixed | Replaced with Bayesian Average (Week 3) |
 | CORS allow_methods="*" | Medium (security for prod) | Pre-deployment |
 | No request caching | Medium (GA re-runs on identical requests) | Week 5 |
 | No rate limiting | High (needed before public) | Week 5 |
-| description_tfidf.pkl unused | Low (Week 3 integration) | Week 3 |
 
 ---
 
@@ -318,7 +316,7 @@ results/
 ### Novel Elements
 1. **Geographic coherence for multi-day trips** — Clustering ensures Day i→i+1 flows logically across province
 2. **User-controlled planning philosophy** — Mode parameter lets users trade efficiency↔experience↔logistics
-3. **Hybrid memetic GA for TSP** — GA+2-opt outperforms pure GA on real Cambodia place data
+3. **Hybrid memetic GA for VRPTW** — GA+2-opt successfully optimized for chronological time windows (VRPTW) and distance simultaneously.
 4. **Weighted sampling for exploration** — High-quality places preferred but not guaranteed, enabling iteration variety
 
 ### Related Work Positioning

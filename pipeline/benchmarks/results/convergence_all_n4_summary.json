@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-05-10T01:55:50",
+  "province": "Siem Reap",
+  "n_places": 4,
+  "trials": 30,
+  "algorithms": {
+    "Random": {
+      "mean_km": 751.5595,
+      "std_km": 110.1173,
+      "min_km": 575.4131,
+      "max_km": 984.4332,
+      "mean_time_ms": 0.0159,
+      "std_time_ms": 0.0046
+    },
+    "Greedy NN": {
+      "mean_km": 621.852,
+      "std_km": 42.5581,
+      "min_km": 575.4131,
+      "max_km": 683.562,
+      "mean_time_ms": 0.018,
+      "std_time_ms": 0.0034
+    },
+    "2-opt": {
+      "mean_km": 621.852,
+      "std_km": 42.5581,
+      "min_km": 575.4131,
+      "max_km": 683.562,
+      "mean_time_ms": 0.0267,
+      "std_time_ms": 0.0036
+    },
+    "GA (basic)": {
+      "mean_km": 575.4131,
+      "std_km": 0.0,
+      "min_km": 575.4131,
+      "max_km": 575.4131,
+      "mean_time_ms": 9.3895,
+      "std_time_ms": 0.8887
+    },
+    "GA (memetic)": {
+      "mean_km": 575.4131,
+      "std_km": 0.0,
+      "min_km": 575.4131,
+      "max_km": 575.4131,
+      "mean_time_ms": 17.3978,
+      "std_time_ms": 1.0147
+    }
+  },
+  "improvements_pct": {
+    "ga_basic_over_random": 23.4375,
+    "ga_memetic_over_random": 23.4375,
+    "ga_memetic_over_2opt": 7.4678,
+    "ga_memetic_over_ga_basic": 0.0
+  },
+  "wilcoxon": [
+    {
+      "comparison": "memetic_vs_basic",
+      "a": "GA (memetic)",
+      "b": "GA (basic)",
+      "statistic": 0.0,
+      "p_value": 1.0,
+      "winner": "GA (basic)"
+    },
+    {
+      "comparison": "memetic_vs_2opt",
+      "a": "GA (memetic)",
+      "b": "2-opt",
+      "statistic": 0.0,
+      "p_value": 0.000152,
+      "winner": "GA (memetic)"
+    },
+    {
+      "comparison": "basic_vs_2opt",
+      "a": "GA (basic)",
+      "b": "2-opt",
+      "statistic": 0.0,
+      "p_value": 0.000152,
+      "winner": "GA (basic)"
+    }
+  ],
+  "report_ready_claims": [
+    "For Siem Reap benchmark cases with n=4 places over 30 trials, the memetic GA achieved 7.47% shorter routes than deterministic 2-opt (Wilcoxon p=0.000152)."
+  ],
+  "analysis_notes": [
+    "GA (memetic) showed near-zero variance across seeds; verify whether deterministic seeding or problem simplicity is dominating.",
+    "Memetic GA beat deterministic 2-opt on mean route length, suggesting the hybrid search adds value beyond local optimization alone.",
+    "Mean memetic GA runtime stayed below 50 ms for this problem size, which is suitable for interactive trip generation."
+  ]
+}

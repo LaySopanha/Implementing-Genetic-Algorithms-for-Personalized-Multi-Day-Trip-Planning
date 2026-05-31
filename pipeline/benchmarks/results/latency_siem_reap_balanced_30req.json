@@ -1,0 +1,300 @@
+{
+  "summary": {
+    "generated_at": "2026-05-08T21:13:27",
+    "request_count": 30,
+    "latency_ms": {
+      "mean": 815.3347,
+      "std": 137.2803,
+      "min": 647.4745,
+      "max": 1173.4035,
+      "p50": 767.5342,
+      "p95": 1081.6083,
+      "p99": 1154.071
+    },
+    "analysis_notes": [],
+    "sample_requests": [
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 1050.5613
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 776.5891
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 1106.7397
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 869.4857
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 833.9679
+      }
+    ]
+  },
+  "requests": [
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 1050.5613
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 776.5891
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 1106.7397
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 869.4857
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 833.9679
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 1050.8922
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 719.0135
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 647.7797
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 761.8369
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 691.4746
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 1173.4035
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 712.9703
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 882.6714
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 655.7977
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 729.8524
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 868.9558
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 771.1015
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 647.4745
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 792.6098
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 817.379
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 1016.6827
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 812.7873
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 695.9
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 712.0115
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 741.2008
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 763.9669
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 713.711
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 917.1619
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 762.8629
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 763.2001
+    }
+  ]
+}

@@ -1,0 +1,645 @@
+{
+  "summary": {
+    "generated_at": "2026-05-08T21:12:20",
+    "trip_count": 50,
+    "coverage": 0.4762,
+    "metrics": {
+      "diversity_entropy": {
+        "mean": 0.2601,
+        "std": 0.3998,
+        "min": 0.0,
+        "max": 1.0
+      },
+      "spatial_efficiency_km_per_activity": {
+        "mean": 6.079,
+        "std": 6.9708,
+        "min": 0.7,
+        "max": 35.775
+      },
+      "score_density": {
+        "mean": 2.8287,
+        "std": 0.362,
+        "min": 1.9966,
+        "max": 3.6703
+      },
+      "hidden_gem_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "total_distance_km": {
+        "mean": 24.316,
+        "std": 27.883,
+        "min": 2.8,
+        "max": 143.1
+      }
+    },
+    "sample_requests": [
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "activities": [
+          "Waterfall",
+          "Art Gallery"
+        ],
+        "accommodation": [
+          "Bed & Breakfast"
+        ],
+        "dining": [
+          "Fine Dining"
+        ],
+        "perDay": 2,
+        "mode": "balanced"
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "activities": [
+          "Historical Site",
+          "Wildlife / Zoo"
+        ],
+        "accommodation": [
+          "Guesthouse"
+        ],
+        "dining": [
+          "Caf\u00e9"
+        ],
+        "perDay": 2,
+        "mode": "balanced"
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "activities": [
+          "Waterfall",
+          "Park / Nature"
+        ],
+        "accommodation": [
+          "Bed & Breakfast"
+        ],
+        "dining": [
+          "Restaurant"
+        ],
+        "perDay": 2,
+        "mode": "balanced"
+      }
+    ],
+    "analysis_notes": [
+      "Hidden-gem rate is zero for this sample; inspect whether the metric is too strict or the sampled requests are biased toward mainstream categories.",
+      "Category diversity is moderate to low in this sample, suggesting room to tune exploration or diversity-aware sampling."
+    ]
+  },
+  "trips": [
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 9.4,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 2.35,
+      "score_density": 2.3894,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 23.0,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 5.75,
+      "score_density": 2.417,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 50.0,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 12.5,
+      "score_density": 2.993,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 17.7,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.425,
+      "score_density": 2.7108,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 17.4,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.35,
+      "score_density": 2.4602,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 12.4,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 3.1,
+      "score_density": 3.0923,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 12.0,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.0,
+      "score_density": 2.8052,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 20.5,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 5.125,
+      "score_density": 3.1522,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 13.2,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.3,
+      "score_density": 3.6703,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 13.1,
+      "diversity_entropy": 1.0,
+      "spatial_efficiency_km_per_activity": 3.275,
+      "score_density": 3.0675,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 5.8,
+      "diversity_entropy": 1.0,
+      "spatial_efficiency_km_per_activity": 1.45,
+      "score_density": 2.8963,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 23.0,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 5.75,
+      "score_density": 3.125,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 73.2,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 18.3,
+      "score_density": 3.4688,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 12.1,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.025,
+      "score_density": 2.4013,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 143.1,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 35.775,
+      "score_density": 2.7714,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 22.6,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 5.65,
+      "score_density": 2.7742,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 17.8,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.45,
+      "score_density": 2.4793,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 14.9,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.725,
+      "score_density": 2.5347,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 5.0,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 1.25,
+      "score_density": 2.5278,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 19.5,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.875,
+      "score_density": 3.0905,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 128.5,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 32.125,
+      "score_density": 2.6829,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 14.4,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.6,
+      "score_density": 1.9966,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 21.2,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 5.3,
+      "score_density": 2.987,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 60.1,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 15.025,
+      "score_density": 2.7088,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 18.3,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.575,
+      "score_density": 2.7887,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 50.3,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 12.575,
+      "score_density": 2.6843,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 16.7,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.175,
+      "score_density": 2.4385,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 6.7,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 1.675,
+      "score_density": 2.3888,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 67.6,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 16.9,
+      "score_density": 2.4454,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 13.2,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.3,
+      "score_density": 2.7874,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 3.9,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 0.975,
+      "score_density": 2.9433,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 7.8,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 1.95,
+      "score_density": 2.8267,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 5.6,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 1.4,
+      "score_density": 2.769,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 4.8,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 1.2,
+      "score_density": 2.6168,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 11.1,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 2.775,
+      "score_density": 2.8203,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 27.6,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 6.9,
+      "score_density": 3.6309,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 34.9,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 8.725,
+      "score_density": 2.9152,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 42.3,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 10.575,
+      "score_density": 3.1912,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 14.3,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.575,
+      "score_density": 3.0267,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 17.5,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.375,
+      "score_density": 3.5105,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 5.7,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 1.425,
+      "score_density": 2.6868,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 17.0,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 4.25,
+      "score_density": 3.0646,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 13.1,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 3.275,
+      "score_density": 2.7905,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 4.8,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 1.2,
+      "score_density": 3.1941,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 25.7,
+      "diversity_entropy": 0.9464,
+      "spatial_efficiency_km_per_activity": 6.425,
+      "score_density": 3.4238,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 3.7,
+      "diversity_entropy": 1.0,
+      "spatial_efficiency_km_per_activity": 0.925,
+      "score_density": 2.0581,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 11.9,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 2.975,
+      "score_density": 2.6383,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 2.8,
+      "diversity_entropy": 0.8113,
+      "spatial_efficiency_km_per_activity": 0.7,
+      "score_density": 3.0647,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 6.9,
+      "diversity_entropy": 0.0,
+      "spatial_efficiency_km_per_activity": 1.725,
+      "score_density": 2.5007,
+      "hidden_gem_rate": 0.0
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "activity_count": 4,
+      "total_distance_km": 31.7,
+      "diversity_entropy": 0.9464,
+      "spatial_efficiency_km_per_activity": 7.925,
+      "score_density": 3.0261,
+      "hidden_gem_rate": 0.0
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-05-10T01:55:54",
+  "province": "Siem Reap",
+  "n_places": 8,
+  "trials": 30,
+  "algorithms": {
+    "Random": {
+      "mean_km": 1515.851,
+      "std_km": 221.2572,
+      "min_km": 1007.9377,
+      "max_km": 1886.8106,
+      "mean_time_ms": 0.0229,
+      "std_time_ms": 0.0054
+    },
+    "Greedy NN": {
+      "mean_km": 765.842,
+      "std_km": 79.0523,
+      "min_km": 669.3312,
+      "max_km": 859.2797,
+      "mean_time_ms": 0.039,
+      "std_time_ms": 0.0029
+    },
+    "2-opt": {
+      "mean_km": 763.9917,
+      "std_km": 77.7402,
+      "min_km": 669.3312,
+      "max_km": 859.2797,
+      "mean_time_ms": 0.3106,
+      "std_time_ms": 0.1059
+    },
+    "GA (basic)": {
+      "mean_km": 722.6814,
+      "std_km": 76.2273,
+      "min_km": 669.3312,
+      "max_km": 852.6362,
+      "mean_time_ms": 32.8853,
+      "std_time_ms": 8.7641
+    },
+    "GA (memetic)": {
+      "mean_km": 669.3312,
+      "std_km": 0.0,
+      "min_km": 669.3312,
+      "max_km": 669.3312,
+      "mean_time_ms": 86.7436,
+      "std_time_ms": 5.0129
+    }
+  },
+  "improvements_pct": {
+    "ga_basic_over_random": 52.325,
+    "ga_memetic_over_random": 55.8445,
+    "ga_memetic_over_2opt": 12.3903,
+    "ga_memetic_over_ga_basic": 7.3823
+  },
+  "wilcoxon": [
+    {
+      "comparison": "memetic_vs_basic",
+      "a": "GA (memetic)",
+      "b": "GA (basic)",
+      "statistic": 0.0,
+      "p_value": 0.004809,
+      "winner": "GA (memetic)"
+    },
+    {
+      "comparison": "memetic_vs_2opt",
+      "a": "GA (memetic)",
+      "b": "2-opt",
+      "statistic": 0.0,
+      "p_value": 3.6e-05,
+      "winner": "GA (memetic)"
+    },
+    {
+      "comparison": "basic_vs_2opt",
+      "a": "GA (basic)",
+      "b": "2-opt",
+      "statistic": 44.5,
+      "p_value": 0.013306,
+      "winner": "GA (basic)"
+    }
+  ],
+  "report_ready_claims": [
+    "For Siem Reap benchmark cases with n=8 places over 30 trials, the memetic GA achieved 12.39% shorter routes than deterministic 2-opt (Wilcoxon p=0.000036).",
+    "Against the Week 1 baseline GA, the Week 2 memetic GA improved mean route length by 7.38% for Siem Reap n=8 cases."
+  ],
+  "analysis_notes": [
+    "GA (memetic) showed near-zero variance across seeds; verify whether deterministic seeding or problem simplicity is dominating.",
+    "Memetic GA beat deterministic 2-opt on mean route length, suggesting the hybrid search adds value beyond local optimization alone."
+  ]
+}

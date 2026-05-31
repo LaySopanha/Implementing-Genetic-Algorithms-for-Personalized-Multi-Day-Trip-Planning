@@ -1,0 +1,103 @@
+{
+  "summary": {
+    "generated_at": "2026-05-08T16:12:37",
+    "request_count": 5,
+    "latency_ms": {
+      "mean": 1988.0489,
+      "std": 1983.8438,
+      "min": 616.0759,
+      "max": 5902.1049,
+      "p50": 913.3297,
+      "p95": 5042.477,
+      "p99": 5730.1793
+    },
+    "analysis_notes": [
+      "p95 latency exceeds the 2-second UX target and should be profiled before production use.",
+      "High tail latency relative to p50 suggests request-level variance worth profiling."
+    ],
+    "sample_requests": [
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 1603.9654
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 904.7687
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 5902.1049
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 913.3297
+      },
+      {
+        "province": "Siem Reap",
+        "days": 2,
+        "mode": "balanced",
+        "per_day": 2,
+        "activity_count": 4,
+        "latency_ms": 616.0759
+      }
+    ]
+  },
+  "requests": [
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 1603.9654
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 904.7687
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 5902.1049
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 913.3297
+    },
+    {
+      "province": "Siem Reap",
+      "days": 2,
+      "mode": "balanced",
+      "per_day": 2,
+      "activity_count": 4,
+      "latency_ms": 616.0759
+    }
+  ]
+}
