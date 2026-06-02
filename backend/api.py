@@ -823,7 +823,7 @@ def format_place(r) -> PlaceInfo:
 
 # ── API Endpoints ──────────────────────────────────────────────────────────────
 
-@app.get("/api/provinces")
+@app.api_route("/api/provinces", methods=["GET", "HEAD"])
 def get_supported_provinces():
     provinces = sorted(df['province'].unique().tolist())
     return {"provinces": provinces}
