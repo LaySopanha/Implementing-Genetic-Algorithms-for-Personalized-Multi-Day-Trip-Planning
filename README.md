@@ -13,7 +13,6 @@ A research-grade system that joins content-based recommendation with metaheurist
 [![Leaflet](https://img.shields.io/badge/Leaflet-Maps-199900?logo=leaflet&logoColor=white)](https://leafletjs.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Live Demo](https://saktmor.sopanhalay.site) &nbsp;•&nbsp; [Methodology](#methodology) &nbsp;•&nbsp; [Results](#results) &nbsp;•&nbsp; [Run Locally](#running-locally) &nbsp;•&nbsp; [Thesis Report](./THESIS_REPORT.md)
 
 </div>
 
@@ -21,7 +20,7 @@ A research-grade system that joins content-based recommendation with metaheurist
 
 ## Abstract
 
-Tourists planning a multi-day trip face two coupled problems: deciding *what* to visit among thousands of candidate places, and deciding *how* to order those visits across days without wasting hours in transit. Most published trip-planning work solves only one half — either recommendation with no routing, or single-day route optimization with no quality model.
+Tourists planning a multi-day trip face two coupled problems: deciding *what* to visit among thousands of candidate places, and deciding *how* to order those visits across days without wasting hours in transit. Most published trip-planning work solves only one half either recommendation with no routing, or single-day route optimization with no quality model.
 
 Sak Tmor tackles both. It collects and merges 4,069 Cambodian places from three independent sources, scores each one with a tuned rating/review/authenticity model, and then runs a **memetic genetic algorithm** (GA hybridized with 2-opt local search) to lay out an efficient multi-day route. A user-controllable *planning philosophy* (`adventure` / `balanced` / `chill`) trades route efficiency against logistical simplicity.
 
