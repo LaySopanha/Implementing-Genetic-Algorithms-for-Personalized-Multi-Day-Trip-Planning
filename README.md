@@ -13,7 +13,7 @@ A research-grade system that joins content-based recommendation with metaheurist
 [![Leaflet](https://img.shields.io/badge/Leaflet-Maps-199900?logo=leaflet&logoColor=white)](https://leafletjs.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Live API](https://endercoder-sak-tmor.hf.space) &nbsp;•&nbsp; [Methodology](#methodology) &nbsp;•&nbsp; [Results](#results) &nbsp;•&nbsp; [Run Locally](#running-locally) &nbsp;•&nbsp; [Thesis Report](./THESIS_REPORT.md)
+[Live Demo](https://saktmor.sopanhalay.site) &nbsp;•&nbsp; [Methodology](#methodology) &nbsp;•&nbsp; [Results](#results) &nbsp;•&nbsp; [Run Locally](#running-locally) &nbsp;•&nbsp; [Thesis Report](./THESIS_REPORT.md)
 
 </div>
 
@@ -51,18 +51,11 @@ On benchmark instances for Siem Reap, the memetic GA produces routes **39.3% sho
 
 The system splits into three stages: an offline **data pipeline**, an online **optimization backend**, and an interactive **frontend**.
 
-```
-  HERE Places API ─┐
-  TripAdvisor API ─┼─▶ merge ─▶ clean ─▶ cleaned_merged_data.csv ─▶ train (TF-IDF + encoders)
-  Tourism scraper ─┘                                                        │
-                                                                            ▼
-   ┌──────────────────────────── FastAPI backend ───────────────────────────┐
-   │  build_pool  →  weighted scoring  →  global GA (select + assign + route)  │
-   │              →  per-day 2-opt polish  →  hotel/dining by proximity        │
-   └──────────────────────────────────┬───────────────────────────────────────┘
-                                       ▼
-                       Vue 3 + Leaflet  (multi-step planner, map, itinerary)
-```
+<div align="center">
+
+![System flow: pipeline to backend to frontend](./frontend/public/system-flow.svg)
+
+</div>
 
 | Layer | Stack | Responsibility |
 |-------|-------|----------------|
