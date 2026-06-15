@@ -20,6 +20,11 @@ pipeline/data/interim/*.csv
 pipeline/data/processed/*.csv
 pipeline/collection/here_cache.json
 
+# Backups and scratch outputs
+*.bak
+backend/output.json
+backend/stats.json
+
 # Node
 node_modules/
 dist/

@@ -279,22 +279,23 @@ results/
 ## 6. Current State
 
 ### Working
-✅ Trip generation end-to-end (basic GA works, no crashes)  
-✅ Geographic clustering (zones ordered logically)  
-✅ Weighted sampling (variety on repeats)  
-✅ Input validation + error handling  
-✅ Trip modes (adventure/balanced/chill)  
-✅ **Memetic GA** (2-opt polish after crossover)  
-✅ **Adaptive mutation rate** (driven by diversity)  
-✅ **Multi-operator bandit** (swap/inversion/insertion with ε-greedy selection)  
-✅ **Convergence tracking** (history per run for analysis)  
+- [x] Trip generation end-to-end (basic GA works, no crashes)
+- [x] Geographic clustering (zones ordered logically)
+- [x] Weighted sampling (variety on repeats)
+- [x] Input validation + error handling
+- [x] Trip modes (adventure/balanced/chill)
+- [x] **Memetic GA** (2-opt polish after crossover)
+- [x] **Adaptive mutation rate** (driven by diversity)
+- [x] **Multi-operator bandit** (swap/inversion/insertion with ε-greedy selection)
+- [x] **Convergence tracking** (history per run for analysis)
+- [x] **Cross-day global GA** (joint selection + day-assignment + routing)
+- [x] **Time-window constraints (VRPTW)** — day-level opening-hour penalties
+- [x] Benchmark suite (GA basic vs memetic vs deterministic baselines + Wilcoxon test)
 
-### In Progress / Next
-⏳ Benchmark comparison (GA basic vs memetic vs VRPTW vs deterministic baselines)  
-❌ Cross-day global GA (Week 4)  
-✅ **Time window constraints VRPTW (Week 4)** — Implemented!  
-❌ NSGA-II multi-objective (Week 4)  
-❌ Sentence embeddings (Week 6)  
+### Next
+- [ ] Bayesian-average rating (replace AUC weight-tuning proxy)
+- [ ] NSGA-II multi-objective Pareto front
+- [ ] Sentence embeddings for description similarity (Khmer-aware)
 
 ---
 
